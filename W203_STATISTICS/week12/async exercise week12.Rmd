@@ -1,0 +1,188 @@
+---
+title: "async exercise week12"
+author: "K Iwasaki"
+date: "August 2, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#closeAllConnections()
+#rm(list=ls())
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/W203 STATS/week12")
+
+library(lmtest)
+library(sandwich)
+library(stargazer)
+library(car)
+
+```
+
+```{r}
+load("wage1.rdata")
+ls()
+desc
+
+```
+
+```{r}
+summary(data)
+str(data)
+nrow(data)
+```
+
+```{r}
+scatterplotMatrix(data[, c("wage", "educ", "exper")])
+```
+## Examine the wage variable
+
+```{r}
+summary(data$wage)
+hist(data$wage, breaks = 50, main = "Hourly Wage", xlab = "dollars")
+
+```
+
+## Examine education
+
+```{r}
+summary(data$educ)
+hist(data$educ, breaks = 0:20 -0.5,
+     main = "Years of Education", xlab = NULL)
+
+# we notice the spikes at 12 years and 16 years of education
+
+```
+
+## Examine years of experience
+
+```{r}
+summary(data$exper)
+hist(data$exper, breaks = 1:52-.5,
+     main = "Years of Potential Experience", xlab = NULL)
+```
+## fit the linear model
+
+```{r}
+model1 = lm(wage ~ educ + exper, data = data)
+
+# don't jump on the summary command
+summary(model1)
+
+
+```
+
+```{r}
+plot(model1)
+
+# first chart
+# check zero conditional mean --- it seems violated
+# check homoskedasticity (variance) --- it seems violated
+
+# second chart
+# check residuals have normal distribution --- it seems violated --- not follows diagonal line
+# but we have large data sets. this is okay.
+
+# third plot 
+# check homoskedasticity (variance) --- if so, smooth line should be horizontal line
+
+# four plot
+# check outlier and points that have large leverage --- leverage and influence is different (cook's distance) --- we don't see any point that has high cook's distance
+
+```
+
+# there are other tools we can use to assess the CLM assumptions.
+# for normality of errors, we can examine the residuals directly
+
+```{r}
+hist(model1$residuals, breaks = 50)
+
+# we might also consider the formal Shapiro-Wilk test of normality
+shapiro.test(model1$residuals)
+
+# null hypothesis is these points are drawn from normal distributions
+# p-value is very small => reject null hypothesis
+# be careful about the sample size
+```
+
+```{r}
+
+# we can confirm the presense of heteroskedasticity with
+# a Breusch-Pagan test. Be careful to consider the smaple
+# size when interpreting this test
+bptest(model1)
+# null hypothesis is we have homostkedasticity
+# p-value is very small => reject null hypothesis
+# be careful about the sample size
+
+```
+
+# responding to violated assumptions
+
+Recall that we seem to have a violation of zero-conditional mean, normality of errors, and homokedasticity.
+
+## because we have a large sample, we can rely on OLS asymptotics.
+## if we set aside causality and just look for the best fit line,
+## exogeneity tells us that our estimates are consistent.
+
+## we also get normality of our sampling distributions from the large sample size.
+
+## to address heterokedasticity, we use robust standard errors.
+```{r}
+coeftest(model1, vcov = vcovHC)
+vcovHC(model1)
+```
+
+# transforming the dependent variable
+
+even though it is not necessary given the large sample size,
+researchers usually enter wage into linear models in logarithmic form
+here, we examine this alternate specificaiton:
+
+```{r}
+model2 = lm(log(wage) ~ educ + exper, data = data)
+plot(model2)
+```
+
+```{r}
+hist(model2$residuals, breaks = 50)
+```
+
+```{r}
+
+# we continue to use robust standard errors, because it's good pratice
+coeftest(model2, vcov = vcovHC)
+```
+## each year of education is associated with about 9.7% higher wages
+
+# dispalying the regression table
+
+```{r}
+# we need the vectors of robust standard errors
+# we can get these from the coeftest output
+(se.model1 = coeftest(model1, vcov = vcovHC)[, "Std. Error"])
+
+# or directory from the robust covariance matrix
+(se.model1 = sqrt(diag(vcovHC(model1))))
+(se.model2 = sqrt(diag(vcovHC(model2))))
+
+stargazer(model1, model2, type = "text", moit.stat = "f",
+          se = list(se.model1, se.model2),
+          star.cutoffs = c(0.05, 0.01, 0.001))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

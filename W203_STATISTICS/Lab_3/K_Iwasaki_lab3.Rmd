@@ -1,0 +1,397 @@
+---
+title: "Lab3"
+author: "K Iwasaki"
+date: "July 16, 2017"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#closeAllConnections()
+#rm(list=ls())
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/W203 STATS/Lab_3")
+
+library(dplyr)
+library(ggplot2)
+
+```
+
+## Introduction
+In this document, I conducted various hypothesis testings on a survey data collected by The American National Election Studies (ANES). Voters in the United states during the 2012 presidential election were surveyed. Following steps are taken for each hypothesis testing.
+
+1. Choose a suitable hypothesis test for the question
+2. Check assumptions for the test
+3. Calculate t-stat and explain its results including both statistical significance and practical 
+4. A brief conclusion with a few high-level takeaways
+
+```{r}
+
+data = read.csv("ANES_2012_sel.csv")
+#head(data)
+#summary(data)
+
+```
+
+## Question 1. Did voters become more liberal or more conservative during the 2012 election?
+**1. Choose a suitable hypothesis test for the quesiton**
+
+Since the variables(libcpo_self, libcpre_self) are ordinal data and they are paird as pre-election data and post-election data, Wilcoxon signed-rank test works for this test. Null hypothesis for the test is the population mean difference is zero. In other words, voters don't change political preference during the election.
+
+**2. Check assumptions for the test**
+
+Quick data exploraiton as following reveals:
+
+- libcpo_sef and libcpre_self shows almost normal distribution, excluding answers that don't indicate any position
+- Notice the answer "-7: Deleted due to partial interview in the post election data". Exclude this data from the t-test since this data doesn't have a pair in the pre-election data.
+- The scatter plot below that shows lots of people don't change their position. However, some people actually do change to more liberal and more convervative.
+- Decided to remove "-8: Don't know", "-9 Refused", and "-2 Haven't thought much about this" from this hypothesis testing because there is no way to tell how they change their position during the election.
+- Observe that the difference between the two variables has almost normal distribution as well.
+
+```{r fig.align="center", fig.width=15, fig.height=7, warning=FALSE}
+# table(data_libc$libcpre_self ,as.numeric(data_libc$libcpre_self))
+data_libc = data %>%
+  select(libcpo_self, libcpre_self)
+
+par(mfrow=c(1,2))
+hist(as.numeric(data$libcpo_self))
+hist(as.numeric(data$libcpre_self))
+
+ggplot(data_libc, aes(x=libcpre_self, y = libcpo_self)) +
+  geom_jitter(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+
+r = c("-6. Not asked, unit nonresponse (no post-election interview)",
+                          "-8. Don't know",
+                          "-2. Haven't thought much {do not probe}",
+                          "-2. Haven't thought much",
+                          "-2. Haven't thought much about this",
+                          "-7. Deleted due to partial (post-election) interview",
+                          "-9. Refused")
+data_libc = data_libc %>%
+  filter(!(libcpo_self %in% r)) %>%
+  filter(!(libcpre_self %in% r))
+
+data_libc$libcpo_self_num = as.numeric(factor(data_libc$libcpo_self))
+data_libc$libcpre_self_num = as.numeric(factor(data_libc$libcpre_self))
+data_libc$diff = data_libc$libcpo_self_num- data_libc$libcpre_self_num
+
+par(mfrow=c(1,2))
+hist(data_libc$diff, breaks = length(unique(data_libc$diff)))
+qqnorm(data_libc$diff)
+
+# confirm the transformation
+# table(data_libc$libcpo_self ,data_libc$libcpo_self_num)
+# table(data_libc$libcpre_self ,data_libc$libcpre_self_num)
+
+# confirm the transformation
+ggplot(data_libc, aes(x=libcpre_self_num, y = libcpo_self_num)) +
+  geom_jitter(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Political preference after data cleaning")
+
+# check how rows are removed
+nrow(data) - nrow(data_libc)
+
+```
+
+**3.Calculate t-stat and expalin its results including both statistical and practical significance**
+
+```{r}
+# wilcoxon signed-rank test
+wilcox.test(data_libc$libcpre_self_num, data_libc$libcpo_self_num, paired = TRUE)
+
+```
+The wilcoxon signed-rank test fails to reject null hypothesis that the population difference between the two groups is zero because p-value is quite large as 0.1662.
+
+```{r}
+# paird t-test
+t.test(data_libc$libcpre_self_num, data_libc$libcpo_self_num, paired = TRUE)
+```
+
+In order to validate the test rigorously, I also ran paird t-test. The test produced as high p-value as the previous test did: p-value is 0.1664. Thus, we don't reject the null hypothesis.
+
+Now, let's check effective size. The mean of the differences is 0.019. This is a bit tricky to interpret because the variables are ordinal not numerical. Think about an example, if a person change from 2. liberal to 3. Slightly liberal, the difference is 1 unit. 0.019 is much smaller than the difference 1. It seems 0.019 is quite small.
+
+**4. A brief conclusion with a few high-level takeaways**
+
+- There is no statistical siginificant evidnece to reject the idea that voters didn't change their beliefs to be more liberal or more conservative during the 2012 election.
+- Small effect size implies that the test result is not practically significant either.
+- The data exploraiton supports the result of the t-test:
+  - Majority of voters remain unchanged of their political preference.
+  - Some voters changed their position to be more liberal and others to be more conversative. The changes are mostly one unit to two units at most. In other wrods, they don't change position siginificantly.
+
+## Question 2. Were Republican voters older or younger, on the average, than Democratic voters in 2012?
+
+**1.Choose a suitable hypothesis test for the quesiton **
+
+The data-set to test is a numerical variable: age and it is not paired. Thus, independent sample t-test should work for this test. Null hypothesis for the test is republican voters on the average are as old as the democratic voters in 2012.
+
+**2.Check assumptions for the test **
+
+Quick data exploraiton reveals:
+
+- The data-set contains data error: there are 60 people chose negative age. Need to exclude them from the test.
+- The density plot shows that distribution of rebuplicans' age and one of democrats' age are both roughtly normally distributed and with similar variance. (Meeting assumptions for normality and hogeneity of variance)
+
+```{r}
+# check distribution of the variables
+par(mfrow=c(1,2))
+hist(as.numeric(data$pid_x))
+hist(data$dem_age_r_x)
+# table(data$pid_x) 
+# table(data$dem_age_r_x) # invetigate data errors
+
+# mute the box plot because it doesn't produce much insight
+# ggplot(data, aes(x=data$pid_x, y = dem_age_r_x)) +
+#   geom_boxplot()+
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# data preparation - segement voters into democrat and republican
+dem_flag = c("1.", "2.", "3.")
+rep_flag = c("5.", "6.", "7.")
+
+data$party = ifelse(grepl(paste(dem_flag, collapse = "|"), data$pid_x), "Democrat", 
+                    ifelse(grepl(paste(rep_flag, collapse = "|"), data$pid_x), "Republican", "None"))
+
+# confirm the transformation
+# table(data$party)
+# table(data$pid_x)
+
+# data preparation
+data_test2 <- data %>%
+  filter(party != "None") %>%
+  select(party, dem_age_r_x)
+
+# how many rows are removed
+nrow(data) - nrow(data_test2)
+
+# check normality and variance by creating two histogram: one is for democrats, the other is for republican
+ggplot(data_test2, aes(x = dem_age_r_x, fill = party)) +
+  geom_density(alpha = 0.4)
+
+
+```
+
+**3.Calculate t-stat and expalin its results including both statistical and practical significance**
+
+Welch's two sample t-test produces very small p-value 3.636e-08 and thus rejects the null hypothesis that republican voters on the average are as old as the democratic voters in 2012. In addition to the statistical significance of the test, let's check pratical siginificance. It turns out the mean of republican age is larger than the mean of democrat age by more than 2 years. This is not a very small difference. Cohen's D 0.1577, small-mid effect size, is in line with this finding.
+
+```{r}
+
+rep_age =  data_test2$dem_age_r_x[data_test2$party == "Republican"]
+dem_age =  data_test2$dem_age_r_x[data_test2$party == "Democrat"]
+
+# independent two sample test
+t.test(rep_age, dem_age, paired = FALSE)
+
+# check cohen's d for effect size
+library(lsr)
+cohensD(rep_age, dem_age)
+
+```
+
+**4.A brief conclusion with a few high-level takeaways **
+
+- Democratic voters on the average are not as old as the republican voters.
+- Mean for republican voters' age is 50.96 against mean for democrat vosters' age 48.21. The difference is not small.
+- The data exploration implies that democrat has higher proportion of voters between 20 - 40 than republican. This contributes to younger average age of democrat.
+
+##Question 3. Were Republican voters older than 51, on the average in 2012?
+
+**1.Choose a suitable hypothesis test for the question **
+
+This is a straightforward one tail t-test with expected value is 51. Null hypothesis for the test is that republican voters were younger than 51 on the average in 2012.
+
+**2.Check assumptions for the test**
+
+Normality of republican age distribution has already been checked in the previous question. The sample size is reasonably large. We are good to run the t-test.
+
+**3.Calculate t-stat and expalin its results including both statistical and practical significance**
+
+It turns out that p-value is large 0.5448 and thus the test fails to reject the null hypothesis that republican voters were younger than 51 on the average in 2012. As noted before, the sample mean for republican voters' age is 50.95639. No surprise that the test fails to reject the null hypothesis.
+
+```{r}
+t.test(rep_age, alternative = "greater", mu = 51, conf.level = 0.95)
+```
+
+**4.A brief conclusion with a few high-level takeaways **
+- There is no statistically strong evidence to reject that republican voters were younger than 51 on the average in 2012.
+- Also note the average age of repulibcan voters is 50.95639.
+
+##Question 4. Were Republican voters more likely to shift their political preferences right or left (more conservative or more liberal), compared to Democratic voters during the 2012 election?
+
+**1.Choose a suitable hypothesis test for the question**
+
+This question is a bit complicated. Break it down piece by piece. First, it compares the shift in republican voters and the shift in democratic voters during the election. The shift can be calculated as the difference between libcpo_self and libpre_self as we did in quesiton 1. Given the shift variable is ordinal and there are two independet samples(the shifts), I choose Wilcoxon rank-sum test. Null hypothesis is republican voters are likely to shift their political preferences as much as democratic voters during the 2012 election.
+
+**2.Check assumptions for the test**
+
+Quick data exploration reveals:
+
+- Therer are voters without party affilication observed as a green dot in the scatter plot below. Need to excluded them for the test as they are out of scope.
+- Recall the data treaments for "-2. Rejected", "-8. Don't know", and etc. in question 1. Need to exclude them since they don't reveal any shift in their political preference.
+- No surprise that democratic voters are more liberal and repubican vosters are more convervative.
+
+```{r fig.align="center", fig.width=15, fig.height=7, warning=FALSE}
+ggplot(data, aes(x=libcpre_self, y = libcpo_self, colour = party)) +
+  geom_jitter(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+## data preparation for the test
+r = c("-6. Not asked, unit nonresponse (no post-election interview)",
+                          "-8. Don't know",
+                          "-2. Haven't thought much {do not probe}",
+                          "-2. Haven't thought much",
+                          "-2. Haven't thought much about this",
+                          "-7. Deleted due to partial (post-election) interview",
+                          "-9. Refused")
+
+data_test4 = data %>%
+  select(party, libcpo_self, libcpre_self) %>%
+  filter(party == c("Democrat", "Republican")) %>%
+  filter(!(libcpo_self %in% r)) %>%
+  filter(!(libcpre_self %in% r))
+
+
+# unique(data_test4$libcpo_self)
+# unique(data_test4$libcpre_self)
+
+data_test4$libcpo_self_num = as.numeric(factor(data_test4$libcpo_self))
+data_test4$libcpre_self_num = as.numeric(factor(data_test4$libcpre_self))
+data_test4$diff = data_test4$libcpo_self_num- data_test4$libcpre_self_num
+
+rep_shift = data_test4$diff[data_test4$party == "Republican"]
+dem_shift = data_test4$diff[data_test4$party == "Democrat"]
+
+par(mfrow=c(2,2))
+hist(rep_shift, breaks = length(unique(data_test4$diff)))
+qqnorm(rep_shift)
+hist(dem_shift, breaks = length(unique(data_test4$diff)))
+qqnorm(dem_shift)
+
+# confirm the transformation
+# table(data_libc$libcpo_self ,data_libc$libcpo_self_num)
+# table(data_libc$libcpre_self ,data_libc$libcpre_self_num)
+
+# confirm the transformation
+ggplot(data_test4, aes(x=libcpre_self_num, y = libcpo_self_num, colour = party)) +
+  geom_jitter(alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# check how rows are removed
+nrow(data) - nrow(data_test4)
+
+table(data$party)
+table(data$libcpo_self)
+
+```
+
+**3.Calculate t-stat and expalin its results including both statistical and practical significance**
+
+Wilcoxon ram-sum test produces p-value = 0.08748. If we apply 95% confidence level, we fail to reject the null hypothesis that republican voters are likely to shift their political preferences as much as democratic voters during the 2012 election. To double-check, I ran the welch two sample t-test and got p-value = 0.1185 which is aligned with the wilcoxon's test result.
+
+To understand the pratical significance, check the mean for the democrat shift and the repulican shift. It turns out both of them are small: -0.02933780 and 0.03468208 respectively.
+
+```{r}
+# Wilcoxon rank-sum test
+wilcox.test(rep_shift, dem_shift, paired = FALSE)
+```
+```{r}
+t.test(rep_shift, dem_shift, paired = FALSE)
+```
+
+**4.A brief conclusion with a few high-level takeaways**
+
+- The t-test fails to reject the null hypothesis that republican voters are likely to shift their political preferences as much as democratic voters during the 2012 election.
+- The scatter plot in the data exploration aligns with this testing result.
+
+
+```{r}
+nested_ifelse <- function(x) {
+  mood <- ifelse(x > 0, 1, 
+         ifelse (x < 0, -1, 0))
+  return (mood)
+}
+  
+rep_shift_binary = sapply(rep_shift, nested_ifelse)
+dem_shift_binary = sapply(dem_shift, nested_ifelse)
+
+# confirm transformation
+# table(rep_shift, rep_shift_binary)
+# table(dem_shift, dem_shift_binary)
+
+wilcox.test(dem_shift_binary, rep_shift_binary, paired = FALSE)
+t.test(dem_shift_binary, rep_shift_binary, paired = FALSE)
+```
+
+
+##Question 5. Select a fifth question that you are interested in investigating.
+
+**1.Choose a suitable hypothesis test for the question**
+
+I am curious to investigate if republican voters earn same level of income on the average as democratic voter do. Since the income variable is ordinal and democrat and republican data are not paird, I choose Wilcoxon rank-sum test. Null hypothesis for the test is that republican voters have same level of educational attainment on the average as democratic voters do.
+
+**2.Check assumptions for the test**
+
+Quick data exploration reveals that:
+
+- need to exclude voters without party affiliation and voters who didn't answer income level
+- republicans' income and democrats' income show similar variance and roughly normal distribution
+- republicans' income has higher peak than democrats' income
+
+```{r}
+unique(data$profile_hhincome)
+data_test5 = data %>%
+  filter(!grepl("-1.", profile_hhincome)) %>%
+  select(party, profile_hhincome)
+  
+first.word <- function(my.string){
+    as.numeric(unlist(strsplit(my.string, ". "))[1])
+}
+data_test5$profile_hhincome = as.character(data_test5$profile_hhincome)
+data_test5$profile_hhincome_t = sapply(data_test5$profile_hhincome, first.word)
+
+# confirm the transformation
+# table(data_test5$profile_hhincome_t, data_test5$profile_hhincome)
+
+ggplot(data_test5, aes(x= profile_hhincome_t, fill = party)) +
+  geom_density(alpha = 0.5)
+
+unique(data_test5$party)
+rep_income = data_test5$profile_hhincome_t[data_test5$party == "Republican"]
+dem_income = data_test5$profile_hhincome_t[data_test5$party == "Democrat"]
+
+```
+
+**3.Calculate t-stat and expalin its results including both statistical and practical significance**
+
+The wilcoxon rank-sum test produces p-value < 2.2e-16 which is quite small. Thus it rejects null hypothesis that  republican voters have same level of educational attainment on the average as democratic voters do. To double-check, I ran independent sample t-test and found it aligned with the wilcoxon rank-sum test.
+
+For pratical significance, mean income for rebpulican voters is 12.537 and mean income for democratic voters is 11.076 (refer the mapping to income$ as below). The difference is more than one unit. This is pratically significant result.
+
+- 10. \$35,000 to \$39,999
+- 11. \$40,000 to \$49,999  
+- 12. \$50,000 to \$59,999
+- 13. \$60,000 to \$74,999 
+
+```{r}
+wilcox.test(rep_income, dem_income, paired = FALSE)
+t.test(rep_income, dem_income, paired = FALSE)
+```
+
+**4.A brief conclusion with a few high-level takeaways**
+
+- Income levels of repulican voters and democratic voters are different on average.
+- The difference is quite large. Republican voters earn income on average more than democratic voters by more than $10K.

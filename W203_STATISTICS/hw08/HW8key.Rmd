@@ -1,0 +1,154 @@
+---
+title: "HW week 8"
+subtitle: "w203: Statistics for Data Science"
+author: "Answer Key"
+output: html_document
+---
+
+**The file GPA1.RData contains data from a 1994 survey of MSU students. The survey was conducted by
+Christopher Lemmon, a former MSU undergraduate, and provided by Wooldridge.**
+
+```{r}
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/01_2017 Summer/W203 STATS/hw08")
+getwd()
+library(moments)
+load("GPA1.RData")
+objects()
+head(data)
+skip = data$skipped
+```
+
+**The $skipped$ variable represents the average number of lectures each respondent skips per week. You are interested in testing whether MSU students skip over 1 lecture per week on the average.**
+
+**a. Examine the $skipped$ variable and argue whether or not a t-test is valid for this scenario.**
+
+```{r}
+length(skip)
+summary(skip)
+```
+
+> The $skipped$ variable has `r length(skip)` observations, the responses range from `r min(skip)` to `r max(skip)`, and the mean (`r mean(skip)`) is greater than the median (`r median(skip)`), which indicates a degree of positive skewness (skewness = `r skewness(skip)`) in the distribution of $skipped$. There are no missing or unusual observations of note.
+
+> Because the population standard deviation is not known a t-test must be used relative to a z-test.
+
+> Next a histogram confirms that the distribution of $skipped$ is **not** normal, it is **positively skewed** (skewness = `r skewness(skip)`) and **bounded to be non-negative**, it is unlikely that with repeated sampling that it would approach normality either.
+
+```{r}
+hist(skip, main="Histogram of average number of lectures skipped per week",
+     xlab="Average number of lectures skipped per week")
+```
+
+> So technically while the t-test requires the population distribution to be normal, it still remains robust with departures from normality. The distribution is not overly unusual, so the researcher simply needs to be aware of the skew and what that means for their Type I and II errors at either end of the distribution.
+
+> Accordingly, the t-test is valid test in this instance, but given the size of the sample n=`r length(skip)` and hence the large number of degrees of freedom the results will in the end be very similar to that of a z-test.
+
+**b. How would your answer to part a change if Mr. Lemmon selected dormitory rooms at random, then
+interviewed all occupants in the rooms he selected?**
+
+> By selecting whole dorms, of which the individual beds may not be allocated on a random basis (gender being an obvious one), it may introduce unexpected sampling bias, so the assumptions underlying the use of a t-test would no longer be valid. As such in my view the t-test would not be valid.
+
+**c. Provide an argument for why you should choose a 2-tailed test in this instance, even if you are hoping to demonstrate that MSU students skip more than 1 lecture per week.**
+
+> There is no particular reason to suggest that the number of skipped lectures will be higher or lower than 1 per week, so a one-sided test is not justified. Instead it is better to determine if the average number of lectures is simply different to 1 per week.
+
+**d. Conduct the t-test using the t.test function and interpret every component of the results.**
+
+```{r}
+results = t.test(skip, mu=1)
+names(results)
+results
+```
+
+Results interpretation:
+
+a. The name of the data is $`r results$data.name`$.
+
+b. The numbers of degrees of freedom used for calculation of values from the t curves are $df=`r results$parameter`$.
+
+c. The $p-value$ is the probability that we can get a set of values at least as extreme as those in the sample assuming that $H_0$ is true. In this instance the $p-value$ is `r results$p.value`.
+
+d. The test statistic which is calculated using the methodology in **part (e)** is `r results$statistic`.
+
+e. The sample mean of the sample set is `r results$estimate`.
+
+f. The value of the population mean in the null hypothesis ($H_0$) is `r results$null.value`, i.e. $H_0: \mu = 1$.
+
+g. The alternative hypothesis ($H_1$) is `r results$alternative`, i.e. $H_1: \mu \neq 1$.
+
+h. The test method is a `r results$method`, which is because we are comparing one sample mean against a fixed hypothesis value of `r results$null.value`.
+
+i. Finally using the sample mean, the sample standard deviation, the test statistic and the number of observations, the `r 100*attr(results$conf.int, "conf.level")`% confidence interval is computed as (`r results$conf.int[1]`,`r results$conf.int[2]`) using the same methodology as **part (f)**.
+
+**e. Show how you would compute the t-statistic and p-value manually (without using t.test), using the pt function in R.**
+
+> The t-statistic is calculated as 
+
+$$t = \cfrac{(\bar{X}-\mu)}{\frac{s}{\sqrt{n}}}$$
+
+> where 
+
+>> $\bar{X}$ = mean of $x_i$'s for i = 1,…,n
+
+>> $\mu$ = 1 (i.e. being tested for)
+
+>> s = sample standard deviation of $x_i$'s for i = 1,…,n
+
+> While the p-value is calculated as: 
+
+>> $p-value = 2 * (1 - P(T<|t|,df))$ i.e. the area of two tails above and below $|t|$ with $df = `r length(skip)-1`$.
+
+> Using R:
+
+```{r}
+xbar = mean(skip)
+mu = 1
+s = sd(skip)
+n = length(skip)
+t = (xbar-mu)/(s/n^0.5)
+t
+df = n - 1
+df
+p = 2 * (1 - pt(t,df))
+p
+round(t,6) == round(results$statistic,6)
+round(p,6) == round(results$p.value,6)
+```
+
+> As shown in the R code, calculations and results above the two methods produce approximately the same results, i.e. I have rounded to 6 decimal places for comparison.
+  
+> In particular, the manual calculations produce a t-statistic of `r t` and a p-value of `r p` compared to the respective $t.test()$ function results from **part (d)** of `r results$statistic` and `r results$p.value`.
+
+**f. Construct a 99% confidence interval for the mean number classes skipped by MSU students in a week.**
+
+> A 99% confidence interval is constructed as:
+
+$$(\bar{X} - t_{\alpha , df} \cfrac{s}{\sqrt{n}} , \bar{X} + t_{\alpha , df} \cfrac{s}{\sqrt{n}})$$
+
+> where $\alpha = 0.995$ and $df = n - 1 = `r df`$
+
+> Using R:
+
+```{r}
+T = qt(0.995,df)
+T
+CI = c(xbar - T*s/n^0.5, xbar + T*s/n^0.5)
+CI
+```
+
+> So the 99% confidence interval is (`r CI`), which notably is wider than the 95% CI in **part (d)** as expected.
+
+> Alternatively using $t.test()$:
+
+```{r}
+t.test(skip, mu=1, conf.level = 0.99)
+```
+
+> which produces the same confidence interval as the manual approach.
+
+**g. Can you say that there is a 99% chance the population mean falls inside your confidence interval?**
+
+> No you can't because this is just one sample from the population, what you can say is that if you repeated the experiment many times that 99% of the confidence intervals would contain the population mean.
+
+
+
+

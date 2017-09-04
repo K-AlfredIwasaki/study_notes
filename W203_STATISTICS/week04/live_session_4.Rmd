@@ -1,0 +1,94 @@
+---
+title: "Week 4 Live Session"
+author: "w203 Instructional Team"
+date: "September 19, 2016"
+output: html_document
+---
+
+
+## Exploratory Data Analysis Debrief
+
+## Homework 3 Presentation
+
+## Random Variables Group Discussion
+
+In weeks 1 and 2, we discussed the different types of variables that can be found in a dataset.  Is it correct to call these random variables?  If not, how are they related to random variables?
+
+## Modeling A Fair Die
+
+The range of a discrete random variable is a discrete set of real numbers, $O$.  Much of the time, the range will simply be a finite set of numbers. For any value k in the range, $0 \leq P(X=k) \leq 1$. The sum over all values k in the range is 1, i.e. $\sum_{k \in O} P(X=k)=1$.
+
+
+The expected value (or population mean) of a discrete random variable X is the weighted average of the values in the range of X.
+$$E(X) = \sum_{k \in O} k \cdot P(X=k)$$
+
+One very useful feature of R is its ability to generate random numbers from a wide variety of distributions.
+
+R Exercise:
+How can we represent a fair (six-sided) die in R?
+
+
+
+
+Find the expected value.
+
+
+Roll the die 10 times, plot the result, and compute the sample mean.
+
+
+
+Roll the die 1000 times, plot the result, and compute the sample mean.
+
+
+
+## Modeling a (Possibly) Fair Coin
+
+Suppose you have a fair coin. With each flip, the coin can land on heads or tails (we will assume that the coin will not land on its side for the purposes of this example). 
+
+How can we represent these possible outcomes of the coin? 
+
+
+	
+How can we represent the outcome of a random experiment, in which you flip the coin 10 times?  Run such a simulation and report the number of heads.
+
+
+
+
+What if the coin is not fair? Repeat your experiment assuming the probability the coin will land Heads is 30% and Tails 70%.  How many heads do you get?
+
+What would happen in the limit as the number of tosses approaches infinity?
+
+
+## The 'Pyramid' Distribution
+
+A continuous random variable has the following PDF.
+
+$$f_X(x)=\begin{cases} x, & 0 \leq x < 1 \\ 2 - x, & 1 \leq x < 2 \\ 0, & \textup{otherwise} \end{cases}$$
+
+a. Find the corresponding CDF and plot it.
+
+b. Compute the expectation of the variable.
+
+c. Prove that the expectation of any random variable with a PDF that's symmetric around some number $k$ is $k$.
+
+d. Compute the variance of the random variable.
+
+## Exponential Decay
+
+The lifespan of a radioactive element is a random variable, $X$, with the following probability density function.
+
+$$ f_X(x) = \begin{cases} ce^{-2x} , &x \geq 0
+\\ 0, &x < 0 \end{cases}$$
+
+where $c$ is a constant.
+
+a. compute the constant $c$.
+b. compute $P(X > 2)$.
+
+
+
+## Modeling an American Delicacy
+
+Suppose that the number of calories in a Twinkie is a normally-distributed random variable.  Given than 50\% of Twinkies have over 100 calories, and 68.2\% of Twinkies are in the interval from 85 calories to 115 calories, what fraction of Twinkies have more than 140 calories? 
+
+Next use R to simulate the production of 1000 Twinkies.  Plot the result and compute the fraction of Twinkies in your sample that have more than 140 calories.

@@ -1,0 +1,215 @@
+---
+title: "Week2"
+author: "K"
+date: "May 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Setup
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/01_2017 Summer/W203 STATS/week02")
+# install.packages("car", dependencies = TRUE)
+library(car)  # we will use the scatterplotMatrix function from car
+
+```
+
+Exploratory question:
+How is the amount of schooling received by a woman related to the number of children she has?
+
+1. The GSS is a survey, and our sample is not reprentative of the U.S. population.
+The current analysis is limited to descriptive statistics, so we will only be making claims about the sample,
+not the population.
+
+2. OUr analysis is not causal.
+
+```{r}
+
+# load the data
+load("Fertility.Rdata")
+
+# check what objectives have been loaded.
+objects()
+
+# Note the number of observations and number of variables
+nrow(Fert_all)
+str(Fert_all)
+
+# examine the age and sex variables
+
+summary(Fert_all$age)
+summary(Fert_all$sex)
+
+# our first step is to subset the data. WE want to get all women that are between the ages of 35 and 44
+subcases = 35 <= Fert_all$age & Fert_all$age < 45 & Fert_all$sex == "Female" & 
+  ! is.na(Fert_all$age) & ! is.na(Fert_all$sex)
+summary(subcases)
+
+# WE use logical vector to pull out just the rows we want and save them into a new data frame
+
+Fert = Fert_all[subcases, ]
+nrow(Fert)
+summary(Fert)
+
+# The subset commands helps us do this more easily
+
+Fert = subset(Fert_all, sex == "Female" & 35 <= age & age < 45) # treat NA automatically
+nrow(Fert)
+summary(Fert)
+
+# observe whether we have missing data
+
+
+```
+
+```{r warning =FALSE}
+# When we have a large number of variables, we often begin with a scatterplot matrix
+
+scatterplotMatrix(~ educ + kids + age + year, data = Fert, diagonal = "histogram")
+
+cor(Fert[, c("educ", "kids", "age", "year")], use = "complete.obs")
+#?cor
+
+```
+
+```{r}
+# we will think of kids as our outcome variable. Let's examine it and plot a histogram
+
+summary(Fert$kids)
+hist(Fert$kids)
+
+# warning: notice that the two left bars are not spaced correctly.
+# the situation would be even worse if ode each interval length 1
+
+hist(Fert$kids, breaks = 8, main = "Incorrect Binning")
+
+# the easiest way to fix this is to input a vector of cut points that lie between the integers
+
+0:8 - 0.5
+hist(Fert$kids, breaks = 0:8 - 0.5,
+     main = "Number of Children Among Participants")
+
+# Finally, we can use the axis command to add the missing tick marks.
+
+axis(1, at = 0:7)
+
+# We stop and study the histogram
+
+# Next, let's examine years of education
+
+summary(Fert$educ)
+
+hist(Fert$educ, breaks = -1:20 + 0.5, main = 'Years of Education',
+     xlab = NULL)
+
+# We stop study the histrogram.
+
+# confirmed graduation effects
+
+summary(Fert$age)
+hist(Fert$age, breaks = 34:44 + 0.5, main = "Age of Participants")
+axis(1, at = 35:44)
+
+
+
+```
+
+```{r}
+plot( Fert$educ, Fert$kids, xlab = "education", ylab = "children",
+      main = "Number of Children versus Years of Education")
+
+
+# try using jitter to add noise
+plot( jitter(Fert$educ, factor = 2), jitter(Fert$kids, factor = 2), xlab = "education", ylab = "children",
+      main = "Number of Children versus Years of Education")
+
+abline(lm(Fert$kids ~ Fert$educ))
+
+# the sample correlation is another way of summarizing the relationship
+cor(Fert$kids, Fert$educ, use = "complete.obs")
+
+# to gain a more detailed view, we can try using a boxplot
+
+boxplot(kids ~ educ, data = Fert,
+        main = "Number of Children by Years of Education",
+        xlab = "education", ylab = "children")
+
+# this only tells quantiles
+
+# to better assess this relationship, we will plot the mean number of kids for each level of education
+
+kids_means = by(Fert$kids, Fert$educ, mean, na.rm = T)
+
+# warning: this is not quite right
+
+plot(kids_means, main = "Growth with Incorrect X-Axis")
+
+# instead, we manually enter the proper values for educ
+
+plot( sort(unique(Fert$educ)), kids_means,
+      main = "Mean Number of Children by Years of Education")
+
+
+# To focus our attention on graduation events, we may want to bin
+# our educ variable into the intervals between graduations.
+
+educ_bin = cut(Fert$educ, breaks = c(0, 11, 15, Inf),
+    labels = c("Some Primary School", "High School Graduate", 
+                              "College Graduate"))
+
+summary(educ_bin)
+
+boxplot(kids ~ educ_bin, data = Fert,
+        main = "Number of Children by Eduational Attainment",
+        ylab = "children")
+
+
+```
+
+
+```{r}
+
+# We examine the relationship between age and educ.
+
+boxplot(age ~ educ, data = Fert,
+        main = "Age of Participants by Years of Education",
+        ylab = "age", xlab = "education")
+
+age_means = by(Fert$age, Fert$educ, mean, na.rm = T)
+plot(sort(unique(Fert$educ)), age_means, 
+     xlab = "education", ylab = "age",
+     main = "Mean Age by Years of Education")
+
+# we next examine the relationship between age and kids
+
+boxplot(kids ~ age, data = Fert,
+        xlab = "age", ylab = "kids",
+        main = "Number of Children by Age")
+
+kids_by_age = by(Fert$kids, Fert$age, mean, na.rm = T)
+plot(sort(unique(Fert$age)), kids_by_age,
+     xlab = "age", ylab = "kids",
+     main = "Mean Number of Children by Age")
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

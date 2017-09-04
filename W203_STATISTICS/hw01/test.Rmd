@@ -1,0 +1,109 @@
+---
+title: "Homework Exercise 1"
+author: "K Iwasaki"
+date: "May 18, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+W203 Statistics for Data Science
+========================================================
+Unit 1 Homework
+========================================================
+
+
+## Exercise
+
+Load the dataset found in the file, cars.csv.
+
+```{r load}
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/01_2017 Summer/W203 STATS/hw01")
+data <- read.csv('cars.csv')
+
+# check the data
+head(data)
+
+nrow(data)
+
+?cars
+
+
+```
+
+
+1. What are the variables in the file?
+```{r}
+str(data)
+```
+
+
+2. Find the mean, median, minimum, maximum, 1st quartile and 3rd quartile for the mpg variable.
+```{r}
+summary(data$mpg)
+```
+
+
+3. Create a histogram of the mpg variable. 
+```{r}
+
+hist(data$mpg, breaks = 10:35 - 0.5, 
+     main = 'Distribution of Variable "mpg"', xlab = NULL)
+
+```
+
+
+4. What is the standard deviation of mpg variable?
+```{r}
+std = sd(data$mpg)
+std
+```
+
+
+5. What is the variance of mpg variable?
+```{r}
+variance = var(data$mpg)
+variance
+```
+
+6. What is the relationship of the standard deviation to the variance? Why does the standard deviation and variance of the mpg variable differ? 
+```{r}
+# create a table and compare the values visually
+mpg_df <- data.frame(variable=c("standard deviation", "variance"), val = c(std, variance))
+
+barplot(mpg_df$val, names.arg = mpg_df$variable)
+
+# The standard deviation is the square root of the variance by definition.
+# Let's check if this is true here.
+
+std_power2 <- std **2
+check <- std_power2 == variance
+check
+
+  
+# viualize this
+new.row1 <- data.frame(variable = "std_power2", val = std_power2)
+mpg_df <- rbind(mpg_df, new.row1)
+
+barplot(mpg_df$val, names.arg = mpg_df$variable)
+
+
+```
+
+
+7. How many data points are there for the cyl variable? 
+```{r}
+length(data$cyl)
+summary(data$cyl) # note there is two NAs
+
+```
+
+8. What is the mean of the cyl variable?
+```{r}
+mean(data$cyl, na.rm=T)
+
+```

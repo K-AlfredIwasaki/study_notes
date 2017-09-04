@@ -1,0 +1,253 @@
+---
+title: "HW Week 11"
+subtitle: "W203: Statistics for Data Science"
+author: "Answer Key"
+date: "18 November 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load data
+
+### Load the data and review the definitions:
+
+```{r}
+setwd("~/Desktop/W203/HW11/")
+getwd()
+load("Week11.Rdata")
+objects()
+Definitions
+```
+ 
+# Rename variables
+
+### Rename all the variables to shorter, more meaningful and easier to use names and examine the `head()` and `summary()` of the data:
+
+```{r}
+oldvars = c("AG.LND.FRST.ZS", "MS.MIL.XPND.GD.ZS", "MS.MIL.XPND.ZS", "NY.GDP.MKTP.CD",
+            "NY.GDP.PCAP.CD", "NY.GDP.PETR.RT.ZS", "MS.MIL.XPRT.KD", "TX.VAL.AGRI.ZS.UN",
+            "MS.MIL.MPRT.KD", "NE.IMP.GNFS.CD", "NE.EXP.GNFS.CD")
+newvars = c("forest", "m_exp_gdp", "m_exp_gov", "gdp", "gdp_pc", "oil", "arms_ex", "agri",
+            "arms_im", "imp", "exp")
+for (i in 3:13) {names(Data)[i] = newvars[match(names(Data)[i],oldvars)]}
+head(Data)
+summary(Data)
+``` 
+
+# Exploratory data analysis
+
+## Look at their histograms and think about transformations that you may need to use for these variables in the model section below. 
+
+```{r}
+for (i in 3:13) 
+  {
+  par(mar=c(5.1,4.1,4.1,1))
+  hist(Data[,i],main=" ",xlab=NULL, breaks=20)
+  title(names(Data)[i], line = -1)
+  }
+```
+
+Many of the variables have significant positive skews, the dollar value-based variables (`gdp`, `gdp_pc`, `imp`, `exp`) in particular. Given that the dollar value-based variables all have non-zero values log transformations can be used on these variables (notably `agri` is also positively skewed and has non-zero observations, albeit a percentage, so can be log transformed as well).
+
+# Proportion of non-null values
+ 
+### Run: `apply(!is.na(Data[,-(1:2)]), MARGIN = 2, mean)` and explain what it is showing.
+
+```{r}
+apply(!is.na(Data[,-(1:2)]), MARGIN = 2, mean)
+```
+
+The `apply()` function is running a `NaN` filter on each column of the data frame, returning `TRUE` if not `NaN` and `FALSE` if `NaN` and then the `mean()` function is performed on each filtered column (i.e. `MARGIN = 2` to calculate the average of each filtered column where `TRUE = 1` and `FALSE = 0`, so the output is the proportion of observations for each variable that are not null values. For example, 96.7% of `forest` observations are not null.
+ 
+# Perfect multicollinearity
+
+### Can you include both `NE.IMP.GNFS.CD` and `NE.EXP.GNFS.CD` in the same OLS model? Why?
+
+```{r}
+filter = !is.na(Data$imp) & !is.na(Data$exp)
+filData = Data[filter,]
+(Cor = cor(filData$imp,filData$exp))
+plot(filData$imp,filData$exp)
+```
+ 
+No, you can’t include both variables in the same OLS model because they have near perfect positive correlation of `r round(Cor, 4)`, which would invalidate the assumption that there is no perfect multicollinearity among the explanatory variables.
+ 
+# Development of Hypothesis
+
+The dependent variable is `forest`, which is the percentage of a country’s land area that is forest.
+ 
+There are many factors that could contribute to the percentage of land area of a country that is forest, for example:
+
+a. **Geography** would likely be a key determinant of the natural proportion of forest in a given country because for example countries near: (i) the equator (e.g. Sudan), (ii) the earth’s magnetic poles (e.g. Iceland), or (iii) at very high altitude (e.g. Nepal) are either extremely hot or cold, so plant life struggles to grow in these conditions because the landscapes tend to be dominated by deserts and snow.
+
+b. **Population density** would likely be another key determinant because more densely populated countries would require a greater proportion of land to be cleared for housing and agriculture for subsistence.
+
+c. **Economic development** would likely be a another key determinant because greater economic development indicates greater prosperity and hence a greater ability to clear land for agricultural and commercial/industrial development purposes.
+
+These are just a few examples of possible key drivers of forest levels, there are likely others.
+ 
+Based on these prepositions the variables in the available data set that are more likely to have a cross-sectional relationship with `forest` are the ones that are related to broad economic activity indicators and agricultural activity. While there is no obvious intuitive link to support inclusion of variables related to military activity in a predictive model of `forest`.
+ 
+Accordingly, variables of interest will come from:
+
+- GDP (current US$) (`gdp`)
+
+- GDP per capita (current US$) (`gdp_pc`)
+
+- Oil rents (% of GDP) (`oil`)
+
+- Agricultural raw materials exports (% of merchandise exports) (`agri`)
+
+- Imports of goods and services (current US$) (`imp`)
+
+- Exports of goods and services (current US$) (`exp`)
+ 
+Considering the relative intuitive merit of these variables the two variables I include in the model are:
+
+- **GDP (current US$) (`gdp`)**: because it is based on a combination  of population size (which to some degree reflects density) and economic development. Because it has significant skew to the right as a result of there being a small number of very large economies globally a log transformation of the variable is necessary. It is expected that sign of the coefficient on this variable should be negative reflecting that more populous and economically developed countries likely have relatively lower area of forest and conversely.
+
+- **Agricultural raw materials exports (% of merchandise exports) (`agri`)**: because as a proxy for the proportion of economic activity dependent on cleared land it may relate to the proportion of the country's overall cleared land. Because it has significant skew to the right as a result of there being a small number of countries with agriculture dominating their exports a log transformation of the variable is used. It is expected that the sign of this variable will be negative reflecting that higher proportions of agricultural economic activity will lead to relatively lower area of forest and conversely.
+ 
+# A model that predicts `forest`
+
+### A two variable model
+
+My predictive model of `forest` with two explanatory variables is as follows:
+ 
+$$forest = \beta_0 + \beta_1 log(gdp) + \beta_2 log(agri) + u$$
+
+```{r}
+model2 = lm(forest ~ log(gdp) + log(agri), data = Data)
+summary(model2)
+```
+
+As you can see despite some reasonably sound intuitive development of the hypotheses the model has relatively poor predictive power, an adjusted r-squared of `r round(summary(model2)$adj.r.squared,4)` implies that only `r 100 * round(summary(model2)$adj.r.squared,3)`% of the variability in `forest` is explained by the model.
+
+The t-stat and p-value on the `log(gdp)` coefficient indicate that it is not statistically significant, albeit the sign of the coefficient is at least in the expected direction.
+
+While the t-stat and p-value of`agri` indicate it has high statistical significance the sign of `agri` is opposite to expected intuition, instead it is indicating that higher agricultural exports is predictive of more `forest`, which is non-sensical.
+
+Overall this model appears to be a poor predictor of the proportion of a country's land that is forest, which given reasonable supporting intuition I find this a little surprising.
+
+### Create a residuals versus fitted values plot and assess whether your coefficients are unbiased.
+
+```{r}
+plot(model2, which=1)
+```
+ 
+The line is not overly horizontal particularly where the observations are more dense, so this suggests that the coefficients are biased because the unobserved variables in `u` are likely correlated with `log(gdp)` and/or `log(agri)`. For example, **geography** is a key variable that is missing from the model.
+ 
+### How many observations are being used in your analysis?
+
+The number of observations being used in my analysis is `r length(model2$residuals)`, having lost 58 observations that were missing from at least one of the explanatory variables or the dependent variable.
+
+### Are the countries that are dropping out dropping out by random chance? If not, what would this do to our inference?
+
+Countries that have no `gdp` data include: 
+```{r}
+filter_gdp = is.na(Data$gdp)
+Data$Country.Name[filter_gdp]
+```
+
+Notably the majority of these countries appear to be territories of other countries in the sample, e.g. New Caledonia is a territory of France, so it is likely that these country's GDP is contained within the parent country GDP. As such the parent countries explanatory variables will be inflated or upwardly biased relative to the dependent variable, which will bias the coefficient on `log(gdp)`.
+
+Countries that have no `agri` data (and are not in `gdp` because they have no `agri` data for the same reason that they have no `gdp` data) include:
+```{r}
+filter_agri = is.na(Data$agri) & !filter_gdp
+Data$Country.Name[filter_agri]
+``` 
+
+Most of these countries are poor, so probably don't have agricultural exports or just don't have the data available, so their absence from the data set, which doesn't appear to be random, will also likely be causing a bias in the results.
+ 
+### Add a third variable.
+
+As the model has been fairly unsuccessful with the variables that most match the developed hypothesis I now add the military variable, `m_exp_gdp` (i.e. military expenditure as a % of GDP), which has no hypothetical support. So the new three variable predictive model of `forest` is:
+
+$$forest = \beta_0 + \beta_1 log(gdp) + \beta_2 log(agri) + \beta_3 m\_exp\_gdp + u$$
+
+```{r}
+model3 = lm(forest ~ log(gdp) + log(agri) + m_exp_gdp, data = Data)
+summary(model3)
+```
+
+Notably the coefficient on `m_exp_gdp` from the three variable model is `r round(model3$coefficient[4],4)`.
+
+### Show how you would use the regression anatomy formula to compute the coefficient on your third variable.  First, regress the third variable on your first two variables and extract the residuals. Next, regress forest on the residuals from the first stage.
+
+```{r}
+# create a data frame with rows of data where there are no nulls
+filter = !is.na(Data$gdp) & !is.na(Data$agri) & !is.na(Data$m_exp_gdp) & !is.na(Data$forest) 
+filData = Data[filter,]
+# perform regression anatomy formula approach
+model_m_exp_gdp = lm(m_exp_gdp ~ log(gdp) + log(agri), data = filData)
+model_forest = lm(forest ~ model_m_exp_gdp$residuals, data = filData)
+summary(model_forest)
+```
+
+The coefficient on the `residuals` in the regression of `forest` on the `residuals` from the regression of `m_exp_gdp` on both `log(gdp)` and `log(agri)` is ``r round(model_forest$coefficient[2],4)`, which is exactly the same as the coefficient from the three variable model.  
+
+### Compare your two models.
+
+The most striking feature of the three variable model is that the new variable, `m_exp_gdp`, is **highly statistically significant** given an absolute t-statistic close to 4. On the face of it this is completely at odds with the developed hypothesis.
+
+The negative sign on the coefficient indicates that as `military spending` rises as a proportion of GDP that `forest` area declines, which doesn't make any intuitive sense. More on this shortly.
+
+### Do you see an improvement? Explain how you can tell.
+
+There is some improvement in the model from adding the third variable.
+
+The third variable has been found to be statistically significant, so you would expect that the proportion of the variability of `forest` explained by the model would have risen, which it has the adjusted r-squared (which adjusts for the fact that the r-squared will always rise when a new variable is added) to `r round(summary(model3)$adj.r.squared,4)` from `r round(summary(model2)$adj.r.squared,4)`.
+
+A residuals versus fitted values plot indicates that the coefficients are no less unbiased under the three variable model compared to the two variable model:
+
+```{r}
+plot(model3, which=1)
+```
+
+Alternatively, the **Akaike Information Criterion (AIC)** is a measure of the relative quality of statistical models for a given set of data. Given a set of candidate models for the data, the preferred model is the one with the minimum AIC value. 
+
+```{r}
+(AIC2 = AIC(model2))
+(AIC3 = AIC(model3))
+```
+
+The three variable model has a lower AIC, so based on this measure it also indicates that the three variable model is an improvement on the variable model.
+
+### Why is `m_exp_gdp` statistically significant?
+
+As mentioned above, on the face of it there doesn't appear to be any sound reason why the proportion of GDP spent on military activity would explain variability in `forest` and in particular a negative relationship. So why is it the case?
+
+To determine this I investigate the countries with the highest spend on military activities:
+
+```{r}
+newData = Data[order(Data$m_exp_gdp, decreasing=T),]
+head(newData$Country.Name,20)
+```
+
+As you can see the countries that spend the most on military activities happen to be countries that have substantial areas of desert and hence low `forest` area, which is a spurious relationship, i.e.  `m_exp_gdp` appears to somewhat proxy **geography** from the developed hypothesis despite there being no reason to suggest that there should be a relationship between proprotion of desert and high levels of spending on military activities. 
+
+### Make up a country named `Mediland` which has every indicator set at the median value observed in the data. How much forest would this country have?
+
+```{r}
+# get median inputs for the 3 variables and create an inputs vector
+m0 = 1
+m1 = log(median(Data$gdp[!is.na(Data$gdp)]))
+m2 = log(median(Data$agri[!is.na(Data$agri)]))
+m3 = median(Data$m_exp_gdp[!is.na(Data$m_exp_gdp)])
+(inputs = c(m0,m1,m2,m3))
+# get the 4 coefficients of the three variable model
+(coef3 = model3$coefficients)
+# calculate the predicted forest level for Mediland
+(forest_medi = sum(inputs * coef3))
+```
+
+The predicted level of forest in Mediland is `r round(forest_medi,1)`%.
+
+# Take away
+
+### What is the causal story, if any, that you can take away from the above analysis? Explain why.
+
+The primary takeaway from the analysis is that blind data mining may find statistical significance, but the findings may be spurious without soundly developed hypotheses.

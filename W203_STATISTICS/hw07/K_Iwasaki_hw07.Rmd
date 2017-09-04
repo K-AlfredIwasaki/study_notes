@@ -1,0 +1,66 @@
+---
+title: "hw07"
+author: "K Iwasaki"
+date: "June 28, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(reshape)
+```
+
+# Maximum Likelihood Estimation for an Exponential Distribution
+
+### Plot the likelihood function
+```{r}
+# likelihood function
+lik.poisson <- function(x, lambda) {
+  return (lambda * exp(-lambda * x) )
+}
+
+y <- seq(0, 10, by = 0.01)
+lambda0.5 <- lik.poisson(y, 0.5)
+lambda1.0<- lik.poisson(y, 1)
+lambda10 <- lik.poisson(y, 5)
+df = data.frame(y, lambda0.5, lambda1.0, lambda10)
+df = melt(df, id=c("y"))
+
+ggplot(df, aes(x=y, y=value)) +
+  geom_line(aes(colour=variable))
+
+```
+
+## Use optimize to approximate the maximum likelihood estimate for lambda
+
+```{r}
+
+times = c(2.65871285, 8.34273228, 5.09845548, 7.15064545,
+          0.39974647, 0.77206050, 5.43415199, 0.36422211,
+          3.30789126, 0.07621921, 2.13375997, 0.06577856,
+          1.73557740, 0.16524304, 0.27652044)
+
+x <- rep(times)
+
+log.lik.poisson <- function(x, lambda) {
+  -sum(log(lambda) - lambda*x)
+}
+
+optim(par = 2.0, log.lik.poisson, x = x, method = "Brent", lower = 0, upper = 100)
+
+```
+
+## Compare the estimate for lambda to the solution for part c
+By plug in n = 15 into the solution for part c, we gain lambda = 0.3949269, which is very close the calcuation above.
+
+```{r}
+# n = 15
+lambda.calc <- function(x, n) n / sum(x)
+lambda.calc(x, 15)
+
+```
+
+
+
+

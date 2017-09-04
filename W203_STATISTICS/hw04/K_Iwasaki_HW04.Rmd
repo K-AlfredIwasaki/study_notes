@@ -1,0 +1,133 @@
+---
+title: "HM4"
+author: "K Iwasaki"
+date: "June 3, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+**1. Best Game in hte Casino**
+(a) Probability distribution: 
+{0 head: 1/8, 1 head: 3/8, 2 heads: 3/8, 3 heads: 1/8 }
+
+\begin{align*} 
+E[x] & = \sum aP(X=a)\\
+6 & = 0 * 1/8 + 2 * 3/8 + 4 * 3/8 + t * 1/8\\
+t & = 30
+\end{align*}
+(b) 
+\[ F(x) = P(X \leq x) \]
+
+\[x < $2, F(x) = f(0) = 0\]
+\[$2 \leq x < $4, F(x) = f(0) + f(1) = 1/8\]
+\[$4 \leq x < $6, F(x) = f(0) + f(1) + f(2)= 1/8 + 3/8 = 1/2\]
+\[$6 \leq x < $30, F(x) = f(0) + f(1) + f(2)= 1/8 + 3/8 + 3/8 = 7/8 \]
+\[$30 \leq x, F(x) = 1\]
+
+Thus, 
+\[ F(x) = \left\{ \begin{array}{ll}
+        0 & \mbox{for $x < 2$};\\
+        1/8 & \mbox{for $2 \leq x < 4$};\\
+        1/2 & \mbox{for $4 \leq x < 6$};\\
+        7/8 & \mbox{for $6 \leq x < 30$};\\
+        1 & \mbox{for $x \geq 30$}.\end{array} \right. \]
+
+**2. Processing Pasta**
+(a)
+\[ F(l) = \left\{ \begin{array}{ll}
+        0 & \mbox{for $l \leq 0$};\\
+        l^2/4 & \mbox{for $0 < l \leq 2$};\\
+        1 & \mbox{for $l > 2$}.\end{array} \right. \]
+(b)
+Definiton of E[x] is \[ E[x] = \int_{a}^{b} xf(x) dx  \]
+
+\begin{align*} 
+
+E[L] &= \int_{0}^{2}lf(l)dl\\
+&= \int_{0}^{2} \frac{l^2}{2} dl\\
+&= \frac{l^3}{3}\Big|_{0}^{2} \\
+&= \frac{8}{3}
+
+
+\end{align*}
+
+**3. The Warranty is Worth It**
+Two random variable T (life span) and X (payout)
+
+Probability density function for T
+\[ f(T) = \left\{ \begin{array}{ll}
+        0 & \mbox{for $t < 0$};\\
+        1 & \mbox{for $0 \leq t \leq 1$};\\
+        0 & \mbox{for $t > 1$}.\end{array} \right. \]
+
+Cumulative probability function for T
+\[ F(T) = \left\{ \begin{array}{ll}
+        0 & \mbox{for $t < 0$};\\
+        t & \mbox{for $0 \leq t \leq 1$};\\
+        1 & \mbox{for $t > 1$}.\end{array} \right. \]
+
+(a) 
+Definiton of E[x] is \[ E[x] = \int_{a}^{b} xf(x) dx  \]
+
+\begin{align*} 
+
+E[X] &= E(g(T)) \\
+&= \int_{0}^{1}g(t)f(g(t)) \\
+&= \int_{0}^{1}g(t) \\
+&= \int_{0}^{1}100(1-t)^\frac{1}{2} \\
+&= \frac{200}{3}
+
+\end{align*}
+
+(b)-i.
+For X = x, \$0 <= x <= \$100, 
+\[100(1-t)^\frac{1}{2} = x  \]
+\[t = 1- \frac{x^2}{10000}\]
+(b)-ii.
+when T <= t, the payment X <= x
+(b)-iii.
+Use cumulative probability desnsity function for T above. For 0 <= t <= 1,
+\[F(T \leq  t) = t = 1- \frac{x^2}{10000}\]
+
+Cumulative probability function for X
+\begin{align*} 
+
+Fx(X) &= 1-Ft(g^-1(t)) \\
+&= 1-Ft(1-\frac{x^2}{10000})\\
+&= \frac{x^2}{10000}
+
+\end{align*}
+
+\[ Fx(X) = \left\{ \begin{array}{ll}
+        0 & \mbox{for $x < 0$};\\
+        \frac{x^2}{10000} & \mbox{for $0 \leq x \leq 100$};\\
+        1 & \mbox{for $x > 100$}.\end{array} \right. \]
+(b)-iv.
+
+\[{Fx(X)}' = fx(X) = \frac{x}{5000} \]
+
+(b)-v. \[ E[x] = \int_{0}^{100} xf(x) dx = \int_{0}^{100}\frac{x^2}{5000}dx  = \frac{200}{3} \]
+
+
+**4. The Baseline for Measuring Deviations**
+(a) For Y = (X-t)^2 and random variable X and a real number t
+
+\begin{align*} 
+
+E[Y] &= E((X-t)^2) \\
+&= E(X^2) - 2tE(x) + t^2 \\
+
+\end{align*}
+
+(b) 
+\[ {E[Y]}' = 2t - 2E(X) = 0 \]
+When t = E(X), E[Y] is minimum
+
+(c)
+\[E(Y) = E(X^2) - 2(E(X))^2\]
+

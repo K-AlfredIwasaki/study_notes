@@ -1,0 +1,139 @@
+---
+title: "hw12"
+author: "K Iwasaki"
+date: "August 2, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#closeAllConnections()
+#rm(list=ls())
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/W203 STATS/hw12")
+
+library(lmtest)
+library(sandwich)
+library(stargazer)
+library(car)
+
+```
+
+# 0. Quick data exploration and data clean up
+
+```{r}
+data = read.table("videos.txt", fill = TRUE, header = TRUE)
+head(data)
+nrow(data)
+
+# check number of na in each col
+sapply(data, function(x) sum(is.na(x))) 
+
+# transform factor into numeric
+data$views = as.numeric(levels(data$views))[data$views]
+data$length = as.numeric(levels(data$length))[data$length]
+
+# check number of na in each col again
+sapply(data, function(x) sum(is.na(x))) 
+
+# remove rows containing NA in the three columns
+data = data[complete.cases(data[, c("length", "views", "rate")]),]
+nrow(data)
+
+scatterplotMatrix(data[, c("views", "length", "rate")])
+
+# examine views column
+summary(data$views)
+hist(data$views, breaks = 1000)
+# extremely skewed to the right
+
+# check outliers
+data[data$views > 500000, ]
+
+# examine length column
+summary(data$length)
+hist(data$length, breaks = 1000)
+# extremely skewed to the right
+
+# check outliers
+data[data$length > 1000, ]
+
+# examine rate
+summary(data$rate)
+hist(data$rate, breaks = 1000)
+```
+
+
+# 1. Fit a linear model predicting the number of views (views), from the length of a video (length) and its average user rating (rate).
+
+
+```{r}
+(model1 = lm(views ~ length + rate, data = data))
+```
+
+```{r}
+plot(model1)
+```
+
+# 2. Using diagnostic plots, background knowledge, and statistical tests, assess all 6 assumptions of the CLM. When an assumption is violated, state what response you will take.
+
+1. Linear population model. This assumption is ok.
+2. Random sampling. There is not much information about how this data is collected.I assume this assumption isn't violated.
+3. No perfect multicolliearity. The plot below doesn't show perfect multicolliearity.
+
+```{r}
+plot(data$length, data$rate)
+```
+4. Zero-conditional mean. Look at the Residuals vs. Fitted plot. Smooth line in the chart is around 0. It seems this assumption is not violated.
+
+5. Homoskedasticity. Look at the Residuals vs. Fitted plot and Scale-location plot. A bit difficult to say if the model shows homoskedasticity or not. To double-check, run a Breaush-Pagan test. p-value is large so we don't reject the null hypothesis that the model has homoskedasticity. Thus this assumption is not violated.
+
+```{r}
+bptest(model1)
+```
+
+
+6. Normality of error term. Look at the q-q plot. This assumption is violated. Since the sample size is 6292, we assume normality of our sampling distributions from the large sample size. Thus, no action on this violation.
+
+
+# 3. Generate a printout of your model coefficients, complete with standard errors that are valid given your diagnostics. Comment on both the practical and statistical significance of your coefficients.
+
+Use robust standard errors since it's good practice and I wasn't sure about homoskedasticity.
+```{r}
+coeftest(model1, vcov = vcovHC)
+```
+
+Look at the predictor variables.
+
+## rate
+p-value is quite small and thus statistically significant. coefficient is 2152. What this means is that holding length is fixed, another 1 point on rate are associated with 2152 views. This is pratically significant.
+
+## length
+p-value is quite large as 0.265 and thus this predictor variable is not statistically significant. Coefficient is only 1.9 and not pratically significant.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

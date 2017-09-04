@@ -1,0 +1,137 @@
+---
+title: "hw10"
+author: "K Iwasaki"
+date: "July 19, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#closeAllConnections()
+#rm(list=ls())
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/W203 STATS/hw10")
+load("bwght.RData")
+```
+
+## Measurement error increase or decrease slope coefficent?
+
+Use bwght.RData provided for the next quesiton. Slope coefficient doesn't change by adding measurement error to the model as below.
+
+```{r}
+model = lm(bwght ~ cigs, data)
+x <- data.frame(cigs = data$cigs)
+data$error = predict(model, x) - data$bwght
+
+model.error = lm(bwght ~ cigs + error, data)
+
+model.error$coefficients[2] - model$coefficients[2]
+ 
+```
+
+
+## Examine the relationship between cigarette smoking and a child's birthweight
+
+
+## 1. Examine the dependent variable, infant birth weight in ounces (bwght) and the independent variable, the number of cigarettes smoked by the mother each day during pregnacy (cigs).
+
+cigs has skewed distribution to the right with most of mothers don't smoke. bwdght has alsmot normal distribribution.
+
+```{r}
+par(mfrow=c(1,2))
+hist(data$cigs, breaks = 30)
+hist(data$bwght, breaks = 30)
+
+summary(data$cigs)
+summary(data$bwght)
+
+```
+
+## 2. Fit a linear model that predicts bwght as a function of cigs. Superimpose your regression line on a scatterplot of your variables.
+
+```{r}
+
+model = lm(bwght ~ cigs, data)
+model
+
+
+plot(x=data$cigs, y = data$bwght)
+abline(model,col="blue",lwd=2)
+```
+
+## 3. Examine the coefficients of your fitted model. Explain, in particular, how to interpret the slope coefficient on cigs. Is it practically significant?
+
+Check both statistical significance and practical significance for the slope coefficient. First, p-value for t-test for slope efficient is quite small as 1.66e-08. This is statistically significant. Thus reject null hypothesis that slope coefficient is 0. 
+
+Second, check the practical siginificance, slope coefficient -0.51377 can be interpreted as one unit increase in cigs leads to decrease of 0.5 pounds in infant birth weight in ounces. This is quite significant intuitively.
+
+```{r}
+summary(model)
+```
+
+# 4. Write down the two moment conditions for this regression. Use R to verify that they hold for your fitted model.
+
+Two moment conditions for linear regression:
+
+1. E(u) = 0
+2. cov(u, x) = 0
+
+
+```{r}
+# validate E(u) = 0
+x <- data.frame(cigs = data$cigs)
+error <- predict(model, x) - data$bwght
+sum(error) / length(data$bwght)
+
+# result is -1.608652e-13
+
+# validate cov(u, x) = 0
+cov(error, x)
+
+# result is -3.865567e-13
+
+```
+
+
+# 5. Does this simple regression capture a causal relationship between smoking and birthweight? Explain why or why not.
+
+Regression describes a dependent relationship in which one or more explanatory variables predict an outcome variable. Regression assumes one-way link between X and Y. In this case regression assumes one-way link between ciarrets and birthweight. However, the regression doesn't not assume a causal relationship.
+
+
+# 6. Does your scatterplot show evidence of measurement error in cigs? If so, what does this say about the true relationship between cigarettes and birthweight?
+
+I observe there are sort of clusters around 0, 10, 20, 30, 40. It might be possible people responded to the survey by answering quesitons roughly not precisely. This might distort the true relationship between cigarettes and birthweight to some extetent which we don't know from the data.
+
+```{r}
+plot(data$cigs)
+```
+
+
+
+# 7. Using your coefficients, what is the predicted birthweight when cigs is 0? When cigs is 20?
+```{r}
+# when cigs is 0, predicted weight is 119.7719 pounds
+model$coefficients[1] + model$coefficients[2] * 0
+
+# when cigs is 20, predicted weight is 109.4965 pounds
+model$coefficients[1] + model$coefficients[2] * 20
+
+```
+
+# 8. Use R's predict function to verify your previous answers. You may insert your linear model object into the command below.
+
+```{r}
+x <- data.frame(cigs = c(0, 20))
+predict(model, x)
+```
+
+# 9. To predict a birthweight of 100 ounces, what would cigs have to be?
+
+```{r}
+# modify the equation
+(100 - model$coefficients[1]) / model$coefficients[2]
+
+# cigs would be 38.4838 per day
+```
+
+

@@ -1,0 +1,165 @@
+---
+title: "Week 13 Live Session"
+author: "w203 Instructional Team"
+
+date: "November 30, 2016"
+output: pdf_document
+---
+
+## Announcements
+
+Quiz 2 is available and due before the week 14 live session.  You instructor has the password.
+<!--  Unit 13 | Linear Model Specification
+    13.1 Week 13 Introduction (0:30) Page  
+    13.2 Materials to Review Page  
+    13.3 Introducing Specification (3:52) Page  
+    13.4 More Hypothesis Testing (7:22) Page  
+    13.5 Joint Significance (8:51) Page  
+    13.6 Variable Transformations (11:55) Page  
+    13.7 Quadratics and Polynomial Specifications (5:25) Page  
+    13.8 Indicator Variables (8:52) Page  
+    13.9 Introducing Interaction Terms (3:14) Page  
+    13.9.1 Interaction Terms for Indicator Variables, Part 1 (11:56) Page  
+    13.9.2 Interaction Terms for Indicator Variables, Part 2 (2:37) Page  
+    13.10 Interaction Terms With an Indicator and a Metric Variable (3:44) Page  
+    13.11 Guidelines for Polynomial and Interaction Terms (3:14) Page  
+    13.12 OLS Specification R Example (24:12) Page  
+    13.13 More Guidelines for Statistical Reporting (5:00) Page  
+-->
+
+<!-- Reading: Wooldridge Ch 4-4 through the end of Ch. 4. Ch 6 through 6-2, Ch 7 through 7-4.
+-->
+<!-- 
+4.4 Testing Hypotheses about a Single Linear Combination of the Parameters 140
+4.5 Testing Multiple Linear Restrictions:The F Test 143
+    Testing Exclusion Restrictions 143
+    Relationship between F and t Statistics 149
+    The R-Squared Form of the F Statistic 150
+    Computing p-Values for F Tests 151
+    The F Statistic for Overall Significance of a Regression 152
+    Testing General Linear Restrictions 153
+4.6 Reporting Regression Results 154
+
+chapter 6 Multiple Regression Analysis: Further Issues 186
+6.1 Effects of Data Scaling on OLS Statistics 186
+    Beta Coefficients 189
+6.2 More on Functional Form 191
+    More on Using Logarithmic Functional Forms 191
+    Models with Quadratics 194
+    Models with Interaction Terms 198
+
+chapter 7 Multiple Regression nalysis with Qualitative Information: Binary (or Dummy) ariables 227
+7.1 Describing Qualitative Information 227
+7.2 A Single Dummy Independent Variable 228
+    Interpreting Coefficients on Dummy Explanatory Variables When the Dependent
+    Variable Is log(y) 233
+7.3 Using Dummy Variables for Multiple Categories 235
+    Incorporating Ordinal Information by Using Dummy Variables 237
+7.4 Interactions Involving Dummy Variables 240
+    Interactions among Dummy Variables 240
+    Allowing for Different Slopes 241
+    Testing for Differences in Regression Functions across Groups 245
+7.5 A Binary Dependent Variable: The Linear Probability Model 248
+7.6 More on Policy Analysis and Program Evaluation 253
+7.7 Interpreting Regression
+-->
+
+*********************************
+# Interpreting Specifications
+
+What is the interpretation of $\beta_1$ in each of the following specifications?
+
+log-level: $\log y = \beta_0 + \beta_1 x + u$
+
+level-log: $y = \beta_0 + \beta_1 \log x + u$
+
+log-log: $\log y = \beta_0 + \beta_1 \log x + u$
+<!-- We call \beta_1 the elasticity. -->
+
+added indicator: $y = \beta_0 + \beta_1 x + \beta_2 I(x = 0) + u$
+
+no intercept: $y = \beta_1 x + u$
+
+
+##Issues with MLR: Using Logarithms
+Using logarithms for the dependent or independent variables is one method used  by econometricians to allow nonlinear relationships between the explained and explanatory variables.
+
+Another potential benefit of using logs is that taking the log of a variable often narrows its range, which is useful when working with variables that are large monetary values. 
+
+Be  careful not to use log transformation indiscriminantly - in some cases this can create extreme values. For example, when a variable y is between zero and one and takes on values close to zero, log(y) can be very large in magnitude whereas the original variable, y, is bounded between zero and one.
+
+
+#-----------
+
+#Hypothesis tests in MLR
+##Testing Hypotheses about a Single Population Parameter: The t Test
+Hypothesis testing for a single coefficient is identical to the bivariate regression case with the t test statistic. The t statistic associated with any OLS coefficient can be used to test whether the corresponding unknown parameter in the population is equal to any given constant. 
+
+In most applications, our primary interest lies in testing the null hypothesis
+$H_0$: $\beta_j$ = 0, where j corresponds to any of the k independent variables. The statistic we use to test (against any alternative) is called "the" t statistic or "the" t ratio of $\hat{\beta_j}$ and is defined as $t_{\hat{\beta_j}}=\hat{\beta_j}$/$se(\hat{\beta_j})$
+
+Since $\beta_j$ measures the partial effect of $x_j$ on (the expected value of) y, after controlling for all other independent variables, this hypothesis is saying that once $x_1, x_2, ., x_{j-1},x_{j}, ., x_k$ have been accounted for, $x_j$ has no effect on the expected value of y. 
+
+Note: We cannot state the null hypothesis as "$x_j$ does have a partial effect on y" because this is true for any value of $\beta_j$ other than zero.
+
+##Testing Hypotheses about a Single Linear Combination of the Parameters
+In 4.4, Wooldridge shows how to test hypotheses about a single
+linear combination of the $b_j$ by rearranging the equation and running a regression using transformed variables. 
+
+Remember to pay attention to the magnitude of the coefficient estimates in addition to the size of the t statistics. 
+
+Q. What is the difference between economical (or practical) and statistical significance?
+
+The statistical significance of a variable $x_j$ is determined entirely by the size of $t_{\hat{\beta_j}}$. 
+The economic or practical significance of a variable is related to the size (and sign) of $\hat{\beta_j}$. 
+
+## Testing Multiple Linear Restrictions: The F Test
+To test multiple hypotheses about the underlying parameters $\beta_0, \beta_1,   ..., \beta_k$, we can use multiple restrictions to test whether a set of independent variables has no partial effect on a dependent variable.
+
+It is often useful to test joint hypotheses together rather than use independent tests of the coefficients. For instance, the joint test that math and verbal SAT scores have no effect on W203 grades against the alternative that one or both scores has an effect. 
+
+Tests of joint hypotheses have test statistics that are distributed according to either the F or $\chi^2$ distributions. These tests are often called Wald tests and may be quoted either as F or as $\chi^2$ statistics. 
+
+<!-- The F statistic is used to test multiple exclusion restrictions, and there are two equivalent forms of the test -  One is based on the SSRs from the restricted and unrestricted models and the other (more convenient form) is based on the R-squareds from the two models.  -->
+When computing an F statistic, the numerator df is the number of restrictions being tested, while the denominator df is the degrees of freedom in the unrestricted model. If there is only one numerator degree of freedom, we are testing only a single hypothesis and it seems like this should be equivalent to the usual t test. If a random variable t follows the $t_{N-K}$ distribution, then its square $t^2$ follows the $F_{(1,N-K)}$ distribution.
+
+
+#-----------
+
+# Exercises
+
+##Qualitative Data: Using Dummy Variables
+
+Explain why the indicator variables have been included in the following models
+
+$wage = \beta_0 + \beta_1 educ + \beta_2 I(educ = 12)$
+
+$wage = \beta_0 + \beta_1 educ + \beta_2 female$
+
+$wage = \beta_0 + \beta_1 educ + \beta_2 female + beta_3 educ*female$
+
+$wage = \beta_0 + \beta_1 female + \beta_2 I(educ = 2) + \beta_3 I(educ = 3) + ... + \beta_{20} I(educ = 20)$
+
+
+##  R Exercise
+
+The file, engin.RData contains data from the Material Requirement Planning Survey carried out in Thailand during 1998.  It was collected by Thada Chaisawangwong, a former graduate student at MSU.  These data are for engineers in Thailand, and represents a more homogeneous group than data sets that consist of people across a variety of occupations.
+
+```{r}
+library(car)
+library(lmtest)
+library(sandwich)
+load("engin.RData")
+```
+
+1. Use visualizations to investigate the bivariate relationship between wage and educ.  Based on this analysis, what transformation, if any, would you apply to wage?
+
+2. Create a linear model, model1, with just male and educ on the right hand side.  Show how you would test the hypothesis that male has no effect on wage.
+
+3. You are considering adding two variables representing experience to the model, exper and pexper.  Show how you would test whether these variables are jointly significant.
+
+4. You are considering adding a variable, swage, representing starting wage to the right hand side.  Explain how this would affect your ability to understand the effects of gender.
+
+5.  Now show how you would alter your model to test whether each additional year of education has the same effect for men and for women.
+
+6. As time allows, continue trying different model specifications, with the goal of understanding what effect gender has on wages.

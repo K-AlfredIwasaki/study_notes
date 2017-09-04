@@ -1,0 +1,92 @@
+---
+title: "hw08"
+author: "K Iwasaki"
+date: "June 30, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd("/Users/K/Desktop/Berkeley/00_Academics/01_2017 Summer/W203 STATS/hw08")
+#closeAllConnections()
+#rm(list=ls())
+```
+
+### a. Examine the skipped variable and argue whether or not a t-test is valid for this scenario
+As shown in the chart below, the skipped variable is skewed to the right. Thus, t-test is not valid for this scenario
+
+```{r}
+load("GPA1.RData")
+head(data)
+hist(data$skipped)
+table(data$skipped)
+
+```
+
+### b. How would your answer to part a change if Mr. Lemmon selected dormitory rooms at random, then interviewed all occupants in the rooms he selected?
+
+As long as Mr. Lemmon selects sufficiently large samples (n > 30), t-test is valid for this scenario
+
+### c. Provide an argument for why you should choose a 2-tailed test in this instance, even if you are hoping to demonstrate that MSU students skip more than 1 lecture per week.
+
+Because we don't know whether the MSU students skip more or less than 1 lecture per week on the average, we should carry out a 2-tailed test in this instance in order to make the test more conservative.
+
+## d. Conduct the t-test using the t.test function and interpret every component of the results.
+```{r}
+t.test(data$skipped, alternative = "two.sided", mu = 1, conf.level = 0.95)
+
+```
+- data$skipped is used for t-test
+- t-test is 0.83142, degree of freedom is 140 which is the number of sample 141 - 1, p-value for two-tailed test is 0.4072
+- what the p-value means is that if null hypothesis, the mean is larger than 1, is true, the chance of getting the sample mean and sample sd will be 41% purely as a result of sampling error, which is quite high.
+- since p-value is higher than significance level 0.05, we don't reject null hypothesis.
+- 95% confidence interval is also calculated as upperlimit 1.257 and lowerlimit 0.895
+- lastly, the mean of sample is calculated: 1.0762
+
+### e. Show how you would compute the t-statistic and p-value manually (without using t.test), using the pt function in R.
+
+```{r}
+# calculate statistics
+s.mean <- mean(data$skipped)
+s.stdev <- sd(data$skipped)
+n <- length(data$skipped)
+
+# critical value
+a <- 1 - 0.95
+(c.value <- abs(qt(p = a/2, df = n-1)))
+
+# t-stat
+(t <- (s.mean - 1) / (s.stdev / sqrt(n) ))
+
+# p-value
+2 * pt(q= -t, df = n-1)
+
+# standard error
+(s.error <- s.stdev / sqrt(n))
+
+# 95% confidence interval
+c(s.mean - c.value * s.error, s.mean + c.value * s.error)
+
+```
+
+
+### f. Construct a 99% confidence interval for the mean number classes skipped by MSU students in a week.
+```{r}
+
+# critical value 99%
+a <- 1 - 0.99
+(c.value <- abs(qt(p = a/2, df = n-1)))
+
+# standard error
+(s.error <- s.stdev / sqrt(n))
+
+# 99% confidence interval
+c(s.mean - c.value * s.error, s.mean + c.value * s.error)
+
+```
+
+
+### g. Can you say that there is a 99% chance the population mean falls inside your confidence interval?
+
+No. Confidence is on methodology. 99% confidence interval means that if we use the same methodology to construct 99% confidence intervals. 99% of the intervals capture the population mean.

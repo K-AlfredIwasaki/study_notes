@@ -1,0 +1,154 @@
+---
+title: "week11 async"
+author: "K Iwasaki"
+date: "August 2, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#closeAllConnections()
+#rm(list=ls())
+setwd("C:/Users/K/Desktop/Berkeley/00_Academics/W203 STATS/week11")
+
+
+```
+
+Recap
+
+```{r}
+load("GPA1.rdata")
+head(data)
+
+
+(model1 = lm(colGPA ~ ACT, data = data))
+
+plot(jitter(data$ACT), jitter(data$colGPA), xlab = "ACT score", ylab = "College GPA", 
+     main = "College GPA versus ACT score")
+abline(model1)
+
+
+```
+
+
+## 11.14 Checking Unbiasedness in R (10:47)
+
+1. Linear population model
+
+2. Random sampling
+
+Think about where the data is coming from. We cannot assess this assumption perfectly for this case.
+
+3. Multicollinearity
+
+4. Zero-conditional mean
+
+We examine the residuals versus fitted values plot
+
+```{r}
+plot(model1$fitted.values, model1$residuals,
+     main = "Residuals vs. Fitted values for GPA data",
+     xlab = "Fitted values", ylab = "Residuals")
+
+# easy way to plot
+
+plot(model1, which = 1)
+
+```
+
+Next, we will want to examine our data to check for any unusually influential cases.
+We can use a residuals vs. leverage plot for this purpose
+
+```{r}
+plot(model1, which = 5)
+```
+
+The following code shows what would happen if we introduced an error into the data set,
+resulting in a point with high influence.
+
+```{r}
+ACT_with_error = data$ACT
+ACT_with_error[5] = 80
+model1_with_error = lm(data$colGPA ~ ACT_with_error)
+plot(model1_with_error, which = 5, main = "GPA Data with Error Introduced")
+  
+```
+
+Notice that the point now stands out as having Cook's distance greater than 1.
+
+We believe that our coefficients are unbiased and there are no problematic cases that should be removed 
+from the data set.
+
+# Multivariate Linear Model Estimation
+
+```{r}
+summary(data$hsGPA)
+hist(data$hsGPA, breaks = 20)
+library(car)
+scatterplotMatrix(data[,c("colGPA", "ACT", "hsGPA")], diagonal = "histogram")
+
+```
+
+Next, we fit the linear model.
+
+```{r}
+(model2 = lm(colGPA ~ ACT + hsGPA, data = data))
+```
+
+Once again, let's look at the residuals versus fitted values plot
+
+```{r}
+plot(model2, which = 1, main = "Model 2 for college GPA")
+```
+
+Let's compare the R-squares for our two models
+
+```{r}
+summary(model1)$r.square
+summary(model2)$r.square
+
+```
+
+Remember that R-squared can only go up when adding new variables
+
+For an assessment of model fit that penalizes extra variables,
+we can use the Akaike Information Criterion (AIC) or the Bayesian Information Criterian (BIC)
+
+```{r}
+AIC(model1)
+AIC(model2)
+# lower AIC value is better fit
+
+```
+# Presenting Regression Output
+
+For a lot of reasons, we usually want to display the results of more than one linear model.
+
+1. There can be good arguments for different specifications
+2. We want to show that an effect is robust across models
+3. We want to show that we're not cherry-picking a model that supports our argument
+
+Because of these reasons, we often want to present the results of multiple models 
+in a *regression table*. The stargazer package is a great way to create these tables.
+
+
+```{r}
+library("stargazer")
+stargazer(model1, model2, type = "text", report = "vc",
+          header = FALSE,
+          title = "Linear Models Predicting College GPA",
+          keep.stat = c("aic", "rsq", "n"),
+          omit.table.layout = "n")
+
+
+```
+
+cheat sheet
+http://www.jakeruss.com/cheatsheets/stargazer/
+
+
+
+
+
+
+

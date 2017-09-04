@@ -1,0 +1,2 @@
+load("/Users/paul/Google Drive/W203 Update/weekly_materials/week_2/Lab_1/ceo_w203.RData")
+tail(CEO)

@@ -1,0 +1,439 @@
+---
+title: "Lab 4: Reducing Crime"
+subtitle: "W 203: Statistics for Data Science"
+date: "08/16/2017"
+author: "Morris Michael Burkhardt, Venu Reddy, K Iwasaki"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+The purpose of this report is to explore crime data from 90 counties collected for the year 1988 and to summarize some key decisive factors that influence crime through statistical modeling and inference techniques. Additionally, the report is designed to help generate policy suggestions that could be applied to local government as a part of a political campaign research.
+
+The following sections of the report detail our explorative data analysis (EDA), statistical modeling techniques, followed by some concluding policy suggestions.
+
+
+# Regression models
+
+## Initial exploratory analysis
+
+```{r, message=FALSE, warning=FALSE}
+library(car)
+library(lmtest)
+library(sandwich)
+library(stargazer)
+Crime_data = read.csv("crime_v2.csv")
+```
+
+
+The crime data frame has `r nrow(Crime_data)` data points for each variable.
+
+We will first take a look at the summary.
+
+```{r}
+summary(Crime_data)
+```
+
+It looks like there are no missing values (NA or NaN) and no values used to code missing values (such as for instance -1). The west, central and urban variables are all dummy variables.
+
+The lowest and highest value for 'probarr', the 'probability' of arrest are very smooth values and therefore suspicious. This variable might be top- and bottom-coded. Since we have no further information on the collection method, we will just take leave the data here as it is.
+
+We will furthermore take a brief look at a scatterplot matrix of our dependent variable with some of the variables we may consider to be key variables.
+
+```{r}
+scatterplotMatrix(Crime_data[, c("crime", "police", "density", "ymale", "tax", "pctmin")],
+                  smoother = FALSE)
+```
+
+Especially the police, the density and the tax variable seem to have a substantial correlation with the crime variable. 
+
+We will now take a closer look at our dependent variable, crime.
+
+```{r}
+hist(Crime_data$crime, breaks = 50, main = "crimes per person", xlab = "crime")
+```
+
+The crime variable has a minimum value of `r min(Crime_data$crime)` and a maximum value of `r max(Crime_data$crime)`. The variable has a positive skew with quite a few outliers on the right and one outlier towards the left.
+
+We should probably log-transform the crime variable, but before we do that, let us take a closer look at the outlier on the low end.
+
+```{r}
+head(Crime_data[order(Crime_data$crime), ],1)
+```
+
+This outlying data point is county number 115. Most of the data for county 115 seem extreme or otherwise suspicious: There are a few very smooth values, such as probarr = 0.5, probsen = 1.5, probconv = 12/11 and mix = 0.1000. Furthermore, county number 115 has some extreme values: The avgsen variable takes on the largest value accross all counties (20.70) and crime takes on the lowest value accross all counties (0.0055332). All these smooth and extreme values indicate that it is likely that there are only very few crimes recorded in county 115. This data point therefore adds a lot of extra variation to our data.
+
+We will therefore remove this data point. 
+
+```{r, fig.width = 3, fig.height=3, fig.show='hold', fig.align='center'}
+Crime_data = Crime_data[Crime_data$county != 115 , ]
+```
+
+Next we will log transform the crime variable.
+
+```{r}
+hist(log(Crime_data$crime), breaks = 50, main = "log of crimes per person", 
+     xlab = "log(crime)")
+```
+
+The highest value of the tax variable is about three times as high as the mean tax value and around 60 % higher than the second highest tax value. This is either an error in the data, or this county might be very different from other counties in many aspects. Maybe it is a very small county with just one big company, or one rich person lives there who boosts up the mean income tax.
+
+```{r}
+head(Crime_data[order(-Crime_data$tax), ],2)
+```
+
+We will therefore remove this data point.
+
+```{r}
+Crime_data = Crime_data[Crime_data$tax < 110, ]
+```
+
+The highest service wage value is almost eight times as high as the mean service wage and over 5.5 times higher than the second highest service wage value. This looks like an error in the data. It is unlikely that the average service wage in one county is so much higher than in all the other counties.
+
+```{r}
+head(Crime_data[order(-Crime_data$wageser), ],2)
+```
+
+We will therefore remove this datapoint.
+
+```{r}
+Crime_data = Crime_data[Crime_data$wageser < 2100, ]
+```
+
+We are aware that it is not mathematically correct to just calculate the mean of all average wages, as we do not know the weights that each business sector has in every county. The average value of all wages of different business sectors within a county should however still be a good indicator for the average wage in that county. We will therefore calculate an average wage variable, avgwage.
+
+```{r}
+Crime_data$avgwage = (Crime_data$wagecon + Crime_data$wagefed + Crime_data$wagefir + 
+                        Crime_data$wageloc + Crime_data$wagemfg + Crime_data$wageser + 
+                        Crime_data$wagesta + Crime_data$wagetrd + Crime_data$wagetuc) / 9
+```
+
+We will take a closer look at the other variables, as we include them into our model. 
+
+
+## Model with key explanatory variables
+
+We believe that police per capita ('police' variable), density ('density' variable) and the proportion of males between the ages of 15 and 24 ('ymale' variable) all have a key effect on crime.
+
+We will first take a look at those independent variables:
+
+```{r, fig.show='hold', fig.align='center'}
+par(mfrow=c(2,2))
+hist(Crime_data$police, breaks = 50, main = "police per capita", xlab = "police")
+hist(Crime_data$density, breaks = 50, main = "density", xlab = "density")
+hist(Crime_data$ymale, breaks = 50, main = "prop. of young males", xlab = "ymale")
+```
+
+All three variables have a positive skew and large outliers to the right. 
+
+Let us take a closer look at the large values in the 'ymale' variable. The greatest value is `r max(Crime_data$ymale)`. Next we will look at the five largest values.
+
+```{r}
+head(Crime_data[order(-Crime_data$ymale), "ymale"])
+```
+
+The largest value is significantly higher than the second largest value. It is very unlikely that almost 25 % of a county' popluation are males between the ages of 15 and 24 years. There may however be an explanation for this high percentage, such as an all men's college in that county. We will therefore keep this data point in our analysis.
+
+```{r, fig.show='hold', fig.align='center'}
+par(mfrow=c(2,2))
+hist(log(Crime_data$police), breaks = 50, 
+     main = "log of police per capita", xlab = "log(police)")
+hist(log(Crime_data$density), breaks = 50, 
+     main = "log of density", xlab = "log(density)")
+hist(log(Crime_data$ymale), breaks = 50, 
+     main = "log of prop. of young males", xlab = "log(ymale)")
+```
+
+Before we include these variables into our regression model, let us look at the correlation amongst our independent variables.
+
+```{r}
+d = data.frame(log(Crime_data$police), log(Crime_data$density), log(Crime_data$ymale))
+colnames(d) = c("log(police)", "log(density)", "log(ymale)")
+cor(d)
+```
+
+None of the correlations is extremely high, so we can exclude multicollinearity.
+
+We will regress log of police, log of density and log of ymale on log of crime.
+
+$$
+\log(crime) = \beta_0 + \beta_1 \cdot \log(police) + \beta_2 \cdot \log(density) + \beta_3 \cdot \log(ymale)
+$$
+
+```{r}
+model1 = lm(log(crime) ~ log(police) + log(density) + log(ymale), data = Crime_data)
+coeftest(model1, vcov = vcovHC)
+```
+
+We will calculate the Akaike Information Criterion for this model, so that we can later compare it with  our other models.
+
+```{r}
+AIC(model1)
+```
+
+To check if the model fulfills the classical linear model assumptions, we will first draw the diagnostic plots.
+
+```{r, fig.height = 4, fig.show='hold', fig.align='center'}
+plot(model1)
+hist(model1$residuals, breaks = 30, 
+      main = "Residuals of model 1", xlab = "residuals")
+```
+
+We will now check all of the classical linear model assumptions:
+
+- Linearity assumption (MLR1):
+Since we have not restricted the error, our population model is linear in parameters. The linearity assumption is therefore met. 
+
+- Random Sampling (MLR2):
+It is uncertain if the selection of counties is a true random sample, as we have no information on how our sample was collected. We are therefore unable to determine, whether the random sampling assumption is met.
+
+- No Perfect collinearity (MLR3):
+We can see from R's data summaries, that none of the independent variables is constant - aside of the 'year' variable, which we will of course not be using in any of our models. 
+We also looked at a correlation matrix (see above) and were not able to identify any exact linear relationships among the independent variables. R would furthermore throw an error, if we were trying to create a model with perfect collinearity amongst the independent variables. The 'no perfect collinearity' assumption is therefore met.
+
+- Zero Conditional Mean (MLR4):
+To check this assumption, we take a look at the above 'Residuals vs Fitted' plot. Zero Conditional mean, means that the expected value of the errors is zero and that the expted value is independent of the independent variables (x's) (or any linear combination of the x's, such as the fitted values). We are therefore looking for a horizontal spline curve (red curve) at zero in the 'Residuals vs Fitted' plot. 
+Our plot shows a curve that is almost horizontal at zero. To the left and to the right end, the spline shows a slight upward trend, which might just be noise due to a low amount of data points in these regions. We therefore conclude that this assumption is sufficiently met.
+
+- Homoskedasticity (MLR5):
+To check this assumption we can look at two of the diagnostic plots. Homoskedasticity means that the variance of the errors is indpendent of the independent variables (x's) (or any linear combination of the x's). At first, we will take a look at the 'Residuals vs Fitted' plot. To check the homoskedasticity assumption in this plot, we look for an even band of plotted data points. This assumption seems violated. It appears as if the band gets thinner towards the right hand side.
+Secondly, we will take a look at the Scale-Location plot. Here, the fitted values are plotted against the square root of the standardized residuals. We are therefore looking for a horizontal spline curve (red curve). This plot again suggests that the assumption of homoskedasticity is violated, as the spline curve declines. 
+Since we have heteroskedasticity, we will be using heteroskedasticity-robust errors.
+
+- Normality (MLR6):
+The normality assumption demands that the errors are normally distributed and also independent of the indpendent variables (x's). We check this assumption by looking at the qq-plot of the standardized residuals. The qq-plot indicates that the distribution of our residuals has heavier tails than a normal distribution. 
+This assumption can also be checked by creating a histogram of the residuals and looking to see if the distribution has the shape of a normal distribution. The histogram also indicates a violation of the normality assumption.
+Since we have a sufficiently large sample, we should be fine to rely on asymptotics to get a normal sampling distribution of our coefficients. When heteroskedasticity robust standard errors are used, we only need to meet MLR1 through MLR4 for asymptotics to work. Under the premise, that the random sampling assumption is met (we do not have this information) we are therefore safe to rely on asymptotics for our coefficients to be normally distributed.
+
+The 'Residuals vs Leverage' plot does not show any data points with very high influence.
+
+
+## Model with key explanatory variables and covariates that increase accuracy without introducing bias
+
+We believe that wealth (measured by tax revenue per capita), whether an area is urban or not, and the proportion of minorities and non-whites will increase the accuracy of the model. We will first take a look at these variables.
+
+```{r, fig.show='hold', fig.align='center'}
+par(mfrow=c(2,2))
+hist(Crime_data$pctmin, breaks = 50, main = "prop. of minorities", xlab = "pctmin")
+hist(Crime_data$tax, breaks = 50, main = "tax revenue per capita", xlab = "tax")
+hist(Crime_data$urban,breaks = 2, main = "urban (dummy)", xlab = "urban")
+```
+
+The tax variable is positively skewed. Since its minimum is a rather high value (`r min(Crime_data$tax)`), it probably does not makes sense to perform a simple log transformation. To confirm this, we will take a quick look at the log transformation of the tax variable.
+
+```{r, fig.width = 3, fig.height=3, fig.show='hold', fig.align='center'}
+hist(log(Crime_data$tax), breaks = 50, 
+     main = "log of tax revenue p.c.", xlab = "log(tax)")
+```
+
+Since the log transformation does not improve the distribution of our tax variable substantially, we will not use a transformation on it.
+
+Next we will look at a correlation matrix of all our independent variables.
+
+```{r}
+d = data.frame(log(Crime_data$police), log(Crime_data$density), log(Crime_data$ymale), Crime_data$pctmin, Crime_data$tax, Crime_data$urban)
+colnames(d) = c("log(police)", "log(density)", "log(ymale)", "pctmin", "tax", "urban")
+cor(d)
+```
+
+Urban and log(density) are highly correlated, which intuitively makes sense. Including the urban variable in our model will prevent bias. The standard error however will likely increase. We will make sure to take a look at the variance inflation factor after modelling.
+
+Furthermore, there is quite some correlation between the tax variable and each of the variables urban and log(police). The variables pctmin and log(ymale) are not highly correlated with any of the variables, while log(density) has some correlation with log(police).
+
+We do not believe that people who commit crimes consider the probability of arrest, conviction or prison sentence or consider the average time it takes for a sentence. We will therefore regress log(police), log(density), log(ymale), pctmin, log(tax) and urban on log(crime).
+
+$$
+\log(crime) = \beta_0 + \beta_1 \cdot \log(police) + \beta_2 \cdot \log(density) + \beta_3 \cdot \log(ymale) + \beta_4 \cdot pctmin + \beta_5 \cdot tax + \beta_6 \cdot urban
+$$
+
+```{r}
+model2 = lm(log(crime) ~ urban + log(police) + log(density) + log(ymale) +  
+              pctmin + tax, data = Crime_data)
+coeftest(model2, vcov = vcovHC)
+```
+
+We will once again calculate the Akaike Information Criterion (AIC).
+
+```{r}
+AIC(model2)
+```
+
+The AIC of our second model (`r AIC(model2)`) indicates a substantially better 'ratio' between fit and parsimony, as it is only about a third of the AIC of our first model (`r AIC(model1)`). In other words, our second model (with three added variables) offers a better compromise between fit and parsimony than our first model. The relative quality of our second model is better than the relative quality of our first model.
+
+To test whether the newly added coefficients are jointly statistically significant, we use the wald test, which generalizes the usual F-test of overall significance, but allows for a heteroskedasticity-robust covariance matrix.
+
+```{r}
+wald1 = waldtest(model1, model2, vcov = vcovHC)
+wald1
+```
+
+The three added variables have joint statistical significance. We will examine the practical significance of all the coefficients later on.
+
+Since we added highly correlated values to the model, we also want to take a look at the variance inflation factors (VIFs).
+
+```{r}
+vif(model2)
+```
+
+None of the VIFs values seems alarming. 
+
+We will now take a look at the diagnostic plots for our second model.
+
+```{r, fig.height = 4, fig.show='hold', fig.align='center'}
+plot(model2)
+```
+
+In comparison to our first model, we have very similar results regarding our classical linear model assumptions. Everything that was said about MLR1 through MLR4 in our first model remains true for our second model. 
+
+The homoskedasticity assumption (MLR5) looks less violated in our second model, as the band of data points in the 'Residuals vs Fitted' plot looks more even and the spline curve in the Scale-Location plot looks more horizontal. It is however still violated and we will continue to use heteroskedasticity-robust errors.
+
+The normality assumption (MLR6) looks more violated in our second model than it did in our first model. It however still stands true, that we can rely on asymptotics under the same circumstances as in our first model.
+
+The 'Residuals vs Leverage' plot does not show any data points with very high influence.
+
+
+## Model with the most covariates
+
+We will add the two dummy variables west and central to the model. We will furthermore add the average time to sentence (avgsen) and the average wage (avgwage) to the model. 
+
+We will still not include variables such as the 'probability' of arrest, the 'probability' of conviction, the 'probability' of prison sentence and the proportion of face to face crimes. Including these variables would somehow imply that we believe that people who commit crimes are aware of these 'probabilities'/ratios. We do not believe that this is the case. We highly doubt that people who commit crimes are aware of such differences between different counties that are all under the jurisdiction of the same local government. Even if there are correlations between those variables and crime, we would expect those to be spurious.
+
+We will now take a look at the avgsen, avgwage, central and west variables.
+
+```{r, fig.show='hold', fig.align='center'}
+par(mfrow=c(2,2))
+hist(Crime_data$avgsen, breaks = 50, main = "average time to sentence", xlab = "avgsen")
+hist(Crime_data$avgwage, breaks = 50, main = "average wage", xlab = "avgwage")
+hist(Crime_data$central, breaks = 2, main = "central (dummy)", xlab = "central")
+hist(Crime_data$west, breaks = 2, main = "west (dummy)", xlab = "west")
+```
+
+Both metric variables (average time to sentence and the average wage) have some skew, but a simple transformation (such as log transformation) would not help in these cases, which is why we will use the variables as they are.
+
+$$
+\log(crime) = \beta_0 + \beta_1 \cdot \log(police) + \beta_2 \cdot \log(density) + \beta_3 \cdot \log(ymale) + \beta_4 \cdot pctmin + \\ 
+\beta_5 \cdot tax + \beta_6 \cdot urban + \beta_7 \cdot west + \beta_8 \cdot central + \beta_9 \cdot avgsen + \beta_{10} \cdot avgwage
+$$
+
+```{r}
+model3 = lm(log(crime) ~ west + central + urban + log(police) + log(density) + 
+              log(ymale) +  pctmin + tax + avgsen + avgwage, data = Crime_data)
+coeftest(model3, vcov = vcovHC)
+```
+
+We will once again take a look at the Akaike Information Criterion (AIC).
+
+```{r}
+AIC(model3)
+```
+
+The AIC of our third model (`r AIC(model3)`) is pretty much the same as the AIC of our second model (`r AIC(model2)`). This means that adding four more independent variables to our model did not really improve the 'ratio' between fit and parsimony. In other words: The relative quality of our second model is approximately equal to the relative quality of our third model. Since the second model is also much simpler to understand than the third model, we would prefer it over the third model. Altogether, the second model seems to offer the best relative quality of all our models.
+
+Next we will check if the four new parameters have joint statistical significance. We will once again use the wald test, which generalizes the F-test of overall significance, but allows for a heteroskedasticity-robust covariance matrix.
+
+```{r}
+wald2 = waldtest(model2, model3, vcov = vcovHC)
+wald2
+```
+
+The test results indicate no joint statistical significance of the four new coefficients.
+
+We will also take a look at the variance inflation factors (VIFs).
+
+```{r}
+vif(model3)
+```
+
+While the variance in our third model did increase quite a bit in comparison to the variance of our second model, the VIF values are not yet alarming. 
+
+Next we will take a look at the diagnostic plots.
+
+```{r, fig.height = 4, fig.show='hold', fig.align='center'}
+plot(model3)
+```
+
+In comparison to our first model, we have very similar results regarding all of our classical linear model assumptions. Everything that was said about MLR1 through MLR6 in our first model remains true for our third model. 
+
+The 'Residuals vs Leverage' plot does not show any data points with very high influence.
+
+## Regression table
+
+Table 1 shows a regression table for all three models. Please note that stargazer would not print the AIC at the time of the creation of this report. Please refer to the above anlysis for the AIC.
+
+```{r, warning=FALSE, results='asis'}
+se.model1 = sqrt(diag(vcovHC(model1)))
+se.model2 = sqrt(diag(vcovHC(model2)))
+se.model3 = sqrt(diag(vcovHC(model3)))
+
+stargazer(model1, model2, model3, type = "latex",
+          header = FALSE,
+          title = "Linear Models Predicting Crime",
+          keep.stat = c("rsq", "n", "aic"),
+          se = list(se.model1, se.model2, se.model3),
+          star.cutoffs = c(0.05, 0.01, 0.001))
+```
+
+
+## Statistical and practical significance
+
+Please note that all of our models are calculated with heterokedasticity robust standard errors. Please note also, that statistical significance is largely influenced by the sample size. The number of observations in each model is about 87, so some of the statistical significance might just be due to the (not large, but still notable) sample size.
+
+We will analyse the statistical and practical significance of our models.
+
+Model 1: 
+
+Statistical significance: Only the coefficient for log(density) has (high) statistical signficance. The other two coefficients, log(police) and log(ymale) have no statistical significance.
+
+Practical significance: All three slope coefficients have practical significance. 1% increase in each (original) variable results in approximately between 0.311% and 0.393% crime rate. 
+
+
+Model 2: 
+
+Statistical significance: The coefficients for log(density) and pctmin, and log(ymale) are all statistically significant. The coefficients for log(density) and pctmin are even highly statistically significant.
+
+Practical significance: Four of our coefficients turn out to be practically significant. For police, density and ymale, 1% increase in each variable results in 0.276%, 0.463% and 0.282% increase in crime rate respectively. A unit increase in the proportion of minorities and non-whites (measured in percent) is associated with a 1.3% increase in crime rate. We would consider the coefficients on urban and tax as not practially significant. The crime rate in urban areas is only 3% lower than it is in non-urban areas.
+
+Model 3:
+
+Statistical significance: This model shows statistical significance for the coefficients of the log(police), log(density) (high!), pctmin and avgsen variable.
+
+Practical significance: The practical significance is similar to model 2. The added variables, avgsen and avgwage both don't have practical significance. The two new dummy variables west and central indicate that around 15% respectively 22% fewer crimes are committed in the western respectively central counties.
+
+## Causality
+
+Omitting variables results in biased coefficients only if the omitted variables are correlated with independent variables that are included in the model.
+
+When we think about crime, it is likely that quite a few determinants of crime have not been accounted for in our models. 
+
+One of those determinants would be education. Since we do not have any data on education, education would be part of our error term, u. Education however is likely to be positively correlated with wealth (endogeneity!). Since we do not have information on the overall average wage per county, we will use tax revenue per capita as a measure of wealth. We believe that tax (as measure of wealth) and education are positively correlated. We were not able to get a practically or statistically significant estimate for the coefficient on tax, but if we assume that the coefficient is actually positive (as indicated by our second regression model), we would have a positive omitted variable bias. Due to the missing significance of our estimate, this argument is not very strong.
+
+In the crime literature, we furthermore found strong evidence that children with certain characteristics commit more crime when they become adults. Among those are is the proportion of children born to single mothers and raised without father. Again, these proportions are likely correlated with wealth (measured through our tax variable), because single mother families likely pay lower tax than families with both (working) parents. The correlation of these proportions with tax is therefore expected to be negative. In our second model, the parameter of tax is positive and hence the omitted variable bias would be negative. Again, the parameter of tax is neither practically nor statistically significant, which is why this argument is not very strong.
+
+Another omitted variable that we believe has an influence on crime, is drug abuse. We believe that drug abuse is correlated with our density variable (higher drug abuse in denser areas). The correlation between density and drug abuse is likely positive and since the coefficient of our log(density) variable is also positive (throughout all models), we expect a positive omitted variable bias. The coefficient on the log(density) variable is both, practically and statistically significant, which is why we conclude that our model is likely biased.
+
+We furthermore also believe that drug abuse is positively correlated with our young male variable. Since the log(ymale) variable has a positive coefficient throughout all our models, we expect a positive omitted variable bias. In model 2, the coefficient on the log(ymale) variable is both, practically and statistically significant, which is why we conclude that this model is likely biased.
+
+Due to these missing independent variables, we do not believe that our models have a causal interpretation. 
+
+It is also important to note the coefficients that appear to have the wrong sign from a causal perspective. The coefficient for police (respectively log(police)) is positive in all the models we built. However, intuitively this does not make sense, because it indicates that more police leads to more crime. If police works as a deterrent for crime, then the coefficient should be negative. Maybe a high amount of police is to be interpreted as a response to a high amount of crime, rather than a predictor of crime. 
+
+
+# Conclusion
+
+Young Males:
+We observe a correlation between young males and the amount of crime. We believe some research and policy changes could be made in a variety of areas of concern such as youth education, drug awareness, healthcare and unemployment.
+
+Police Force:
+We have also observed that counties with a high number of police per capita have higher crimes per person, indicating counties might have added more police force to control crime in those regions for the year of 1988. We believe this one time set of data might be insufficient and it might be more useful to look at a time-series of crime data, before and after adding a higher amount of police force to make more meaningful policy suggestions. 
+
+Density:
+The data reveals a high amount of crime in dense areas. Local government could focus more on these dense areas by making policy changes and improving law enforcement or by increasing public awareness (e.g. posters in subway stations).
+
+Minority Proportion:
+We do not have practical significance on our statistical analysis regarding the proportion of minorites and hence cannot give a well grounded recommendation on this factor. It would however be interesting to study this topic in more depth.
+
+
