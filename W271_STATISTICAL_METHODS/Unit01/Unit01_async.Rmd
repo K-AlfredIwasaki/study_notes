@@ -1,0 +1,445 @@
+---
+title: "Unit01"
+author: "K Iwasaki"
+date: "September 3, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Computing Probabilities of Binomial Probability Model
+
+Bernoulli Probability Distributions
+
+$P(Y=y) = \pi^{y}(1-\pi)^{1-y}$ for y = 0 or 1
+
+Binomial Probility Distributions
+$$
+P(W=w) = \frac{n!}{w!(n-w)!}\pi^w(1-\pi)^{n-w}
+$$
+
+```{r, fig.height = 3, fig.width = 5, fig.show='hold', fig.align='center'}
+# calcualte the probability for w = 1, which is 1 success in 5 trials
+dbinom(x = 1, size = 5, prob = .6)
+
+# calculate the probabilities for w = 0, 1, 2, 3, 4, 5
+dbinom(x = 0:5, size = 5, prob = .6)
+
+pmf = dbinom(x = 0:5, size = 5, prob = .6)
+pmf.df = data.frame(w = 0:5, prob = round(x = pmf, digits = 4))
+pmf.df
+
+plot(x = pmf.df$w, y = pmf.df$prob, type = "h", xlab = "w",
+     ylab ="P(W=w)", main = "Plot of a binomial PMF for n = 5, pi=0.6",
+     panel.first = grid(col="gray", lty = "dotted"),
+     lwd = 2)
+abline(h=0)
+
+```
+
+## Repeat the implementation in R exercise using pi = 0.2, n = 10. What about pi = 0.8, n = 10? Submit your R script.
+
+```{r, fig.height = 3, fig.width = 5, fig.show='hold', fig.align='center'}
+# pi = 0.8, n = 10
+pmf = dbinom(x = 0:10, size = 10, prob = .8)
+pmf.df = data.frame(w = 0:10, prob = round(x = pmf, digits = 4))
+pmf.df
+
+plot(x = pmf.df$w, y = pmf.df$prob, type = "h", xlab = "w", ylab = "P(W=w)",
+     main = "Plot of a binomial PMF for n = 10, pi = 0.8",
+     panel.first = grid(col = "gray", lty = "dotted"), lwd = 2
+     )
+
+```
+
+## Simulating a Binomial Probability Model
+
+```{r, fig.height = 3, fig.width = 5, fig.show='hold', fig.align='center'}
+set.seed(4848)
+bin5 = rbinom(n = 1000, size = 5, prob = 0.6)
+bin5[1:20]
+mean(bin5)
+var(bin5)
+
+table(x = bin5)
+
+hist(x = bin5, main = "Binomial with n = 5, pi = 0.6, 1000 bin, observations",
+     col = "blue", probability = TRUE, breaks = -0.5:5.5, ylab = "Relative frequency")
+
+```
+
+### Maximum Likelihood Estimation
+A good estimate of the unknown parameter $\theta$ would be the value of $\theta$ that **maximizes** the likelihood of getting the data we observed.
+
+Suppose we have a random sample $X_1, X_2,,,, X_n$ for which the PDF(or PMF) function of each $X_i$ is $f(x_i;\theta)$. Then the joint PDF( or PMF) of $X_1, X_2,,,, X_n$  which we'll call $L(\theta)$ is:
+
+$$
+L(\theta)=P(X_1=x_1,X_2=x_2,\ldots,X_n=x_n)=f(x_1;\theta)\cdot f(x_2;\theta)\cdots f(x_n;\theta)=\prod\limits_{i=1}^n f(x_i;\theta)
+$$
+
+Suppose w = 4 and n = 10. Given this observed information, we would like to find the corresponding parameter value for pi that produces the largest probability of obtaining this particular sample.
+
+$$
+L(\pi|y_1,,,,y_n) =\prod_{i=1}^nP(Y_i = y_i) = \prod_{i=1}^n\pi^{y_i}(1-\pi)^{1-y_i}= \pi^{w}(1-\pi)^{n-w}
+$$
+
+
+Given the resulting data, the likelihood function measures the plausibility of different values of pi
+
+```{r, fig.height = 3, fig.width = 5, fig.show='hold', fig.align='center'}
+sum.y = 4
+n = 10
+# try different value of pi
+pi = c(0.2, 0.3, 0.35, 0.39, 0.4, 0.41, 0.5)
+Lik = pi^sum.y * (1-pi)^(n-sum.y)
+data.frame(pi, Lik)
+
+# likelihood funciton plot
+curve(expr = x^sum.y*(1-x)^(n-sum.y), xlim = c(0,1),
+      xlab = expression(pi), ylab = "Likehood function",
+      main = "Likelihood Function of Binomial Probability Model")
+
+```
+
+Note that pi = 0.4 is the most plausible value of pi for the observed data
+because this maximizes the likelihood function.
+Therefore, 0.4 is the maximum likelihood estimate.
+
+## Wald Confidence Interval
+
+Recall $\hat{\pi}$ is a aximum likelihood estimator. Wald confidence interval for $pi$:
+
+$$
+\hat{\pi}\pm Z_{1-\alpha/2} \sqrt{Var(\hat{\pi})} = \hat{\pi}\pm Z_{1-\alpha/2} \sqrt{\frac{\hat{\pi}(1-\hat{\pi})}{n}}
+$$
+Refer the MLE calc in the Async for a calculation of $Var(\hat{\pi})$
+
+```{r}
+w = 4
+n = 10
+alpha = 0.05
+pi.hat = w / n
+
+var.wald = pi.hat * (1 - pi.hat) / n
+lower = pi.hat - qnorm(p = 1-alpha/2) * sqrt(var.wald)
+upper = pi.hat + qnorm(p = 1-alpha/2) * sqrt(var.wald)
+round(data.frame(lower, upper), 4)
+
+# quicker
+round(pi.hat + qnorm(p = c(alpha/2, 1- alpha/2)) * sqrt(var.wald), 4)
+
+```
+
+## Calculate the True Confidence or Coverage (textbook page 20)
+
+suppose that n = 40, pi = 0.157, and alpha = 0.05
+
+1. Simulate 1,000 samples using the rbinom() function with n = 40 and pi = 0.157
+
+2. Caclualte the 95% Wald confidence interval for each sample, and
+
+3. Calculate the proportion of intervals that contain pi = 0.157; this is the estimated true confidence interval
+
+```{r}
+numb.bin.samples = 1000 # try 1000 times
+pi = 0.157
+alpha = 0.05
+n = 40
+set.seed(4516)
+w = rbinom(n = numb.bin.samples, size = n, prob = pi)
+pi.hat = w/n
+var.wald = pi.hat*(1 - pi.hat)/n
+lower = pi.hat - qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+upper = pi.hat + qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+data.frame(w, pi.hat, lower, upper)[1:10, ]
+
+save = ifelse(test = pi > lower, yes = ifelse(test = pi < upper, yes = 1, no = 0), no = 0)
+save[1:10]
+
+mean(save)
+```
+
+In this example, an estimate of the true confidence level is only 0.878 (not 0.95)
+
+## Contingency Table and Confidence Interval of Two Binary Variables
+
+```{r}
+c.table = array(data = c(251, 48, 34, 5), dim = c(2,2),
+                dimnames = list(First = c("made", "missed"),
+                                second = c("made", "missed")))
+c.table
+```
+
+```{r}
+rowSums(c.table)
+
+pi.hat.table = c.table / rowSums(c.table)
+pi.hat.table
+```
+
+The estimated probability that Larry Bird makes his second free throw attemp is pi one hat is 0.8808, given that he makes the first, and pi two hat is 0.9057, given he misses the first.
+
+## Formulation of Contingency Table and Confidence Interval of Two Binary Variables
+
+$\pi$ can be treated as an approximate normal r.v. with mean $\pi$ and variance $\pi(1-\pi)/n$ for a large sample.
+Also $Var(\hat{\pi_1} - \hat{\pi_2}) = Var(\hat{\pi_1}) + Var(\hat{\pi_2})$ because they are independent.
+
+Wald Confidence Interval
+
+$$
+\hat{\pi_1} - \hat{\pi_2}\pm Z_{1-\alpha/2}
+\sqrt{\frac{\hat{\pi_1}(1-\hat{\pi_1})}{n_1} + \frac{\hat{\pi_2}(1-\hat{\pi_2})}{n_2}}
+$$
+Agresti and Caffo Confidence interval
+
+$$
+\hat{\pi_1} - \hat{\pi_2}\pm Z_{1-\alpha/2}
+\sqrt{\frac{\hat{\pi_1}(1-\hat{\pi_1})}{n_1+\color{red}{2}} + \frac{\hat{\pi_2}(1-\hat{\pi_2})}{n_2+\color{red}{2}}}
+$$
+
+
+```{r}
+alpha = 0.05
+pi.hat1 = pi.hat.table[1,1]
+pi.hat2 = pi.hat.table[2,1]
+
+# Wald CI
+var.wald = pi.hat1*(1 - pi.hat1) / sum(c.table[1,]) + pi.hat2*(1-pi.hat2) /sum(c.table[2,])
+pi.hat1 - pi.hat2 + qnorm(p = c(alpha/2, 1-alpha/2)) * sqrt(var.wald)
+
+# Agresti-Caffo CI
+pi.tilde1 = (c.table[1,1] + 1) / (sum(c.table[1,]) + 2)
+pi.tilde2 = (c.table[2,1] + 1) / (sum(c.table[2,]) + 2)
+var.AC = pi.tilde1*(1-pi.tilde1) / sum(c.table[1,] + 2) + 
+  pi.tilde2*(1-pi.tilde2) / (sum(c.table[2,] + 2))
+pi.tilde1 - pi.tilde2 + qnorm(p = c(alpha/2, 1- alpha/2)) * sqrt(var.AC)
+
+```
+
+## Testing the difference of two probabilities
+
+```{r}
+alpha = 0.05
+pi.hat1 = pi.hat.table[1,1]
+pi.hat2 = pi.hat.table[2,1]
+
+colSums(c.table)
+n1 = rowSums(c.table)[1]
+n2 = rowSums(c.table)[2]
+
+pi.bar = colSums(c.table)[1] / sum(colSums(c.table))
+pi.bar
+
+z = (pi.hat1 - pi.hat2) / sqrt(pi.bar * (1 - pi.bar) * (1/n1 + 1/n2) )
+abs(z)
+
+crit.value = qnorm(p = 1 - alpha/2)
+ifelse(abs(z) > crit.value, "reject", "fail to reject") 
+
+```
+
+```{r}
+prop.test(x = c.table, conf.level = 0.95, correct = FALSE)
+```
+## Relative Risk
+
+Shortcoming of basing inference on $\pi_1 - \pi_2$ is that it measures a quantity whose meaning changes depending on the size of $\pi_1$ and $\pi_2$
+
+$$
+Relative Risk = \frac{\pi_1}{\pi_2}
+$$
+Interpretation: 
+
+Assume $\pi_1$ is a probability of getting an adverse reaciton under the drug and $\pi_2$ is a probability of getting an adverse reaction under the placebo.
+$\pi_1/\pi_2 = 10$: An adverse reaction is **10 times as likely ** for those individuals taking the drug than those individuals taking the placebo. Or the probability of an adverse reaction is **9 times larger** for individuals taking the drup than those individuals taking the placebo.
+
+## MLE for Relative Risk
+$$
+Relative Risk = \frac{\pi_1}{\pi_2} = \frac{w_1/n_1}{w_2/n_2}
+$$
+Wald confidence interval for RR is
+$$
+exp[ log(\hat{\pi_1}/\hat{\pi_2})\pm Z_{1-\alpha/2}\sqrt{Var(log(\hat{\pi_1}/\hat{\pi_2})} ]
+$$
+
+## Odds Ratios
+
+*Odds* are the probability of success divided by the probability of a failure. Odds are reclaing of probability of success. $odds = \pi/(1-\pi)$
+
+Odds ratios:
+$$
+OR = \frac{odds_1}{odds_2} = \frac{\pi_1/(1-\pi_1)}{\pi_2/(1-\pi_2)}
+$$
+
+Interpretation:
+The estimated odds of a success are OR times as large as in Group1 than in Group2
+
+## MLE for Odds Ratios
+
+Wald Condience Interval for Odds Ratios:
+
+$$
+exp[ log(OR)\pm Z_{1-\alpha/2} \sqrt{\frac{1}{w_1} + \frac{1}{n_1 - w_1} +\frac{1}{w_2} + \frac{1}{n_2 - w_2}} ]
+$$
+
+## Practice Problem 19
+
+Examine the benefits of using the vaccine over the placebo with the most appropriate measure(s)
+
+```{r}
+c.table = array(data = c(51, 74, 8146, 8124), c(2, 2),
+                dimnames = list(Treatment = c("Vaccine", "Placebo"),
+                                Response = c("HIV", "No HIV")))
+c.table
+
+rowSums(c.table)
+colSums(c.table)
+
+pi.hat.table = c.table/rowSums(c.table)
+pi.hat.table
+```
+
+### Pearson chi-square test
+
+```{r}
+prop.test(x = c.table, conf.level = 0.95, correct = FALSE)
+```
+p-value is smaller than $\alpha$. Thus reject the null hypothesis.
+
+### Likelihood Ratio Test --- Textbook 36 page
+
+### Testing by calculating piece by piece
+
+```{r}
+alpha = 0.5
+pi.hat1 = pi.hat.table[1,1]
+pi.hat2 = pi.hat.table[2,1]
+
+n1 = rowSums(c.table)[1]
+n2 = rowSums(c.table)[2]
+
+var = (pi.hat1*(1-pi.hat1)/ n1 +  pi.hat2*(1-pi.hat2)/ n2)
+z = (pi.hat1 - pi.hat2) / sqrt(var)
+abs(z)
+
+crit.value = qnorm(p = 1 - alpha /2)
+ifelse(abs(z) > crit.value, "reject", "fail to reject")
+
+```
+
+### Relative Risk
+
+```{r}
+pi.hat1 / pi.hat2
+pi.hat2 / pi.hat1
+```
+
+Interpretation: Probability of getting infected with HIV for Placebo group is 45% larger than the one for Treament group
+
+
+```{r}
+# wald confidence interval
+var.log.rr = (1 - pi.hat1)/ (n1 * pi.hat1) + (1 - pi.hat2) / (n2 * pi.hat2)
+
+ci = exp(log(pi.hat1/pi.hat2)  + qnorm(p = c(alpha/2, 1-alpha/2)) * sqrt(var.log.rr))
+round(ci, 4)
+
+rev (round (1/ci, 4)) # inverted
+
+```
+Interpretation: with 95% confidence, we can say that the treatment reduces the population risk of HIV infection by 32 - 40% (1-0.7789, 1-0.6099)
+
+
+### Odds Ratios
+
+```{r}
+odds1 = pi.hat1 / (1- pi.hat1)
+odds2 = pi.hat2 / (1- pi.hat2)
+odds1/odds2
+odds2/odds1
+
+```
+Interpretation: The estimated odds of HIV infection is 45% higher in placebo group than in treament group.
+
+```{r}
+var.log.or = 1/c.table[1,1] + 1/c.table[1,2] + 1/c.table[2,1] + 1/c.table[2,2]
+
+ci = exp(log(odds1/odds2) + qnorm(p = c(alpha/2, 1-alpha/2)) * sqrt(var.log.or) )
+round(ci, 4)
+
+rev (round( 1/ci, 4))
+
+```
+
+## 12
+
+suppose that n = 40, pi = 0.157, and alpha = 0.05
+
+1. Simulate 1,000 samples using the rbinom() function with n = 40 and pi = 0.157
+
+2. Caclualte the 95% Wald confidence interval for each sample, and
+
+3. Calculate the proportion of intervals that contain pi = 0.157; this is the estimated true confidence interval
+
+```{r}
+numb.bin.samples = 1000 # try 1000 times
+pi = 0.157
+alpha = 0.05
+n = 40
+set.seed(4516)
+w = rbinom(n = numb.bin.samples, size = n, prob = pi)
+pi.hat = w/n
+var.wald = pi.hat*(1 - pi.hat)/n
+lower = pi.hat - qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+upper = pi.hat + qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+in_or_out = ifelse(test = pi > lower, yes = ifelse(test = pi < upper, yes = 1, no = 0), no = 0)
+data.frame(w, pi.hat, lower, upper, in_or_out)[1:10, ]
+
+mean(save)
+```
+
+
+```{r}
+pi = 0.157
+alpha = 0.05
+n = 40
+w = 0:n
+pi.hat = w/n
+pi.seq = seq(from = 0.001, to = 0.999, by = 0.0005)
+
+# wald
+var.wald = pi
+.hat*(1-pi.hat)/n
+lower.wald = pi.hat - qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+upper.wald = pi.hat + qnorm(p = 1 - alpha/2) * sqrt(var.wald)
+
+# save true confidence levels in a matrix
+save.true.conf = matrix(data = NA, nrow = length(pi.seq), ncol = 2)
+
+counter = 1
+
+# loop over each pi
+for (pi in pi.seq) {
+  pmf = dbinom(x = w, size = n, prob = pi)
+  save.wald = ifelse(test = pi > lower.wald, yes = ifelse(test = pi < upper.wald, yes = 1, no = 09),
+                     no = 0)
+  wald = sum(save.wald*pmf)
+  save.true.conf[counter, ] = c(pi, wald)
+  counter = counter + 1
+}
+
+plot(x = save.true.conf[, 1], y = save.true.conf[,2],
+     main = "Wald", xlab = expression(pi), ylab = "True confidence level",
+     type = "l", ylim = c(0.85, 1))
+abline(h = 1-alpha, lty = "dotted")
+
+```
+
+
+
+
+
+
+

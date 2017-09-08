@@ -20,8 +20,6 @@ e.xy <- mean(samples$xy)
 cov(samples$x, samples$y)
 
 
-
-
 ### Problem 4 -----------------------------------------------------------------------
 # e. n = 100, plot X, Y and cacluate D1, D2, ,,,Dn
 base <- seq(-1, 1, 0.01)
