@@ -1,0 +1,33 @@
+
+In selecting the 10 best hospitals, I considered four factors: timely/effective, survey, readmission, and mortality.
+The challenge was to make them comparable. Since each factor was measured and assessed with a different set of criteria,
+they are in quite different orders. I took two-step approach. First step was to clean up and re-calculate a score for each factor.
+Below 
+
+- Timely/Effective --- from effective_care.csv, I removed some measures that have high variablity such as ED1 and 
+measures that are in very different order such as Percent of Newborn, then calculated average score of remainining measures for each hospital.
+- Survey --- 	       from surveys_response.csv, I used HCAHPS Base Score as Survey score for each hospital
+- Readmission ---      from readmissions.csv, I assigned +1 if a measure gets better score than average, -1 if worse score, else 0.
+- Mortality ---	       from readmissions.csv, I took same approach to readmission.
+
+Second step was normalization. I normalized scores by subtracting mean and then dividing by standard deviation of all the hospitals.
+Take survey score as an exampel: I calculated mean 20.01 and stadard deviation 17.88 for all the hospitals.
+If one hospital gets 40. It will be normalized with the calculation (40 - 20.01) / 17.88 = 1.118
+
+With the normalized scores for each factor, I calculated total score for each hospital by simply summing them up. Below is the best 10 hospitals I came up with.
+One thing to note is even though I normalized scores, readmission score are relatively high compared to other scores and thus dominate total score.
+As a result, it influences the ranking a lot more than other scores. One way to counter this is to multiply certain weight with each factor to balance among factors.
+
+ID	Hospital 			State   Timely/Effective       	Survey  		Readmission   	    Mortality   	 Total
+100087  SARASOTA MEMORIAL HOSPITAL      FL      0.6926096677952248      -0.0565894114943447     8.19405704205869    3.0519470338235344   11.882024332183104
+370215  OKLAHOMA HEART HOSPITAL, LLC    OK      1.5321767926656975      3.297826156280988       4.1392050551144735  1.5205577445135416   10.489765748574701
+030103  MAYO CLINIC HOSPITAL    	AZ      -0.2668956177710297     2.9064776733738658      4.1392050551144735  3.0519470338235344   9.830734144540845
+450358  METHODIST HOSPITAL,THE  	TX      0.7954138055344668      0.3906659975423663      0.08435306817025624 7.646114901753513    8.916547773000602
+240010  MAYO CLINIC HOSPITAL ROCHESTER  MN      -0.2783182997420562     1.3410837417453771      1.4359703971516617  6.11472561244352 	 8.613461451598504
+440091  MEMORIAL HEALTHCARE SYSTEM, INC TN      -0.5787348355800629     0.558386775931133       6.842439713077285   1.5205577445135416   8.342649397941898
+140010  EVANSTON HOSPITAL       	IL      0.03009411347566764     -0.9511002295677667     1.4359703971516617  7.646114901753513    8.161079182813076
+390179  CHESTER COUNTY HOSPITAL 	PA      0.3061422611088171      1.6765252985229104      1.4359703971516617  4.583336323133527    8.001974279916917
+520138  AURORA ST LUKES MEDICAL CENTER  WI      0.7611457596213862      -0.39203096827187794    1.4359703971516617  6.11472561244352 	 7.91981080094469
+130006  ST LUKE'S REGIONAL MEDICAL CENT ID      0.4527333464036612      0.3906659975423663      5.490822384095879   1.5205577445135416   7.854779472555449
+Time taken: 26.071 seconds, Fetched: 10 row(s)
+---- create tables following the ER diagram

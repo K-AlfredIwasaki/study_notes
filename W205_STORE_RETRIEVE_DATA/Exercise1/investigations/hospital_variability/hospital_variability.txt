@@ -1,0 +1,17 @@
+
+By grouping the measureID in the effective_care table and sorting with mean and standard deviation for each measure, I identified the measures with the great variability as following.
+
+
+
+MeasureID	Measure Name										Mean			Standard deviation
+ED_1b   	ED1     										276.96907216494844      103.9772874660485
+ED_2b   	ED2     										100.49224067519738      64.61623086138776
+OP_18b  	OP 18   										142.1953804347826       43.15691957172668
+OP_3b   	Median Time to Transfer to Another Facility for Acute Coronary Intervention     	58.33249370277078       32.40961509657893
+OP_31   	Improvement in Patient�s Visual Function within 90 Days Following Cataract Surgery      85.14035087719299   	29.2661343094838
+OP_29   	Endoscopy/polyp surveillance: appropriate follow-up interval for normal colonoscopy	79.9287980260839 	24.50305252578068
+OP_2    	Fibrinolytic Therapy Received Within 30 Minutes of ED Arrival   			71.22222222222223       21.4550923478395
+OP_23   	Head CT results 									71.28291536050156       19.92578053825412
+OP_30   	Endoscopy/polyp surveillance: colonoscopy interval for patients			        86.1901996370236        19.27928592661989
+OP_20   	Door to diagnostic eval 								25.83152468800868       18.218145009983544
+Time taken: 50.27 seconds, Fetched: 10 row(s)

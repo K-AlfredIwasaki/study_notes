@@ -1,0 +1,38 @@
+I examined correlation if timely/effectiveness, readmission, and mortality scores have correlation with survey score.
+It turns out correlation is quite weak as shown below. Intuition was at least one of the scores has correlate with survey score
+because I thought poor quality of care leads to poor survey score.
+
+Correlation between Timely/Effectiveness and Survey
+0.15924351917409524     	
+
+Correlation between Readmission and Survey
+0.12797131484934787
+
+Correlation between Mortality and Survey
+-0.0083215634880264
+Time taken: 26.481 seconds, Fetched: 1 row(s)
+
+To understand what is going on, I investigated further by looking at the most variable measures that I identified in the prior investigation.
+A measure has higher variability is a measure that one hospital operates with much better quality than another hospital. 
+In other words, which hospital to choose matters for a patient if she takes that measure. 
+This type of measures might drive a survey score more than measures with low variability (most hospitals provide same quality for these measures).
+
+I discovered scores for measures ED_1b, ED_2b and OP_18b have high correlation with survey score respectively.
+The higher scores for these measures are (the worse quality of these measures are), the lower survey score is.
+Conclusion of this investigation is that timeliness of emergency care is the biggest driver of the survey score.
+
+ED_1b measure and Survey
+-0.37426604377632666
+
+ED_2b measure and Survey
+-0.3498643335615036
+
+OP_18b measure and Survey
+-0.30878558665080474
+
+OP_3b measure and Survey
+0.06875800547769387
+
+OP_31 measure and Survey
+-0.004644394743879538
+
