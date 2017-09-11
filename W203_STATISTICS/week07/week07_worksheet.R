@@ -1,4 +1,4 @@
-# bernoulli distribution as a special case of 
+  # bernoulli distribution as a special case of 
 # the binomial distribution
 
 rbinom(3, size=1, prob=0.5)

@@ -3,7 +3,7 @@ title: 'Statistics for Data Science'
 author: "W203 Instructional Team"
 date: "2/24/2017"
 output: 
-  html_document
+  pdf_document
 ---
 
 # Main Topics Covered in Lecture 7:
@@ -89,7 +89,7 @@ optimize(f, interval = c(0,100), maximum = TRUE)
     - Estimated Time: Total 30 minutes 
     - Breakout 15 minutes, Classwide disscussion: 15 minutes
 
-Suppose that you’ve got a sequence of values $$ {1, 0, 0, 1, 0, 1, 1, 1, 1, 1} $$, which, say, indicates whether a printer jams each day, for the last 10 business days. *Business Question: What is the probability ($p$) that the printer jams in any given day?*
+Suppose that you have got a sequence of values $$ {1, 0, 0, 1, 0, 1, 1, 1, 1, 1} $$, which, say, indicates whether a printer jams each day, for the last 10 business days. *Business Question: What is the probability ($p$) that the printer jams in any given day?*
 
 It resembles draws from a Bernoulli disribution. However, even if we want to model this as a Bernoulli distribution, we do not know what the value of the parameter, $p$, is.
 
@@ -164,7 +164,7 @@ $$
 
 Instead of using calculus, we will find this parameter numerically. We first need to define a function that specifies the probability of our data set. You may do this using code like the following. 
 
-Let’s define the function:
+Let's define the function:
 ```{r}
 likelihood <- function(s, p)
 {
@@ -196,7 +196,7 @@ qplot(p,
       ylab = 'Likelihood')
 ```
 
-Use R’s optimization routine to find the maximum likelihood estimate of $p$. I use the general optimization routine *optim()* in this exericse.
+Use R's optimization routine to find the maximum likelihood estimate of $p$. I use the general optimization routine *optim()* in this exericse.
 
 
 ```{r}

@@ -5,33 +5,17 @@ date: "Feb 27, 2017"
 output: pdf_document
 ---
 
-## Announcements
-
-You may take Quiz 1 at any time in the next week, before the week 9 live session.
-
-- Time limit is 2 hours  There are 15 questions.
-
-- The quiz is located on the ISVC.  Look under the **Assignments and Assessments** section of the Coursework tab.
-
-- You instructors will supply the password you need to access the quiz.
-
-- Note that you can go forwards and backwards through the questions.  There is a navigation frame on the right that lets you skip around to any question.
-
 *********************************
 
 ## T-Distribution Functions in R
 
 Suppose $X_1,X_2,...,X_n$ is a random sample from a normal distribution with mean $\mu$ and unknown standard deviation.
 
-Let $T= (\bar{X} - \mu) / (s/\sqrt{n})$ where $\bar{X}$ is the mean and s is the sample standard deviation (sd) of $X_1$,…,$X_n$.
+Let $T= (\bar{X} - \mu) / (s/\sqrt{n})$ where $\bar{X}$ is the mean and s is the sample standard deviation (sd) of $X_1$,,$X_n$.
 
 Then T is distributed as a t-distribution with df= n-1 degrees of freedom.
 
-
-
-In R, we can use the following functions to find the values needed for t-tests. Specifically, we can find the density, distribution function, quantile function and random generation for the t distribution with df degrees of freedom (and optional non-centrality parameter ncp):
-
-dt gives the density, pt gives the distribution function, qt gives the quantile function, and rt generates random deviates. 
+In R, dt gives the density, pt gives the distribution function, qt gives the quantile function, and rt generates random deviates. 
 
 ### Usage
 dt(x, df, ncp, log = FALSE) 
@@ -66,9 +50,11 @@ What is the 2.5th and 97.5th percentiles of the t distribution with 5 degrees of
 ```
 
 What is the 2.5th and 97.5th percentiles of the t distribution with 1 to 10 degrees of freedom?
+
 ```{r}
  qt(c(.025, .975), df=1:10)   
 ```
+
 
 ## P-Values and Confidence Intervals
 
