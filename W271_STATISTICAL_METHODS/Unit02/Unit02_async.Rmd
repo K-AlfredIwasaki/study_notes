@@ -1,0 +1,298 @@
+---
+title: "Unit2"
+author: "K Iwasaki"
+date: "September 13, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Plot the logistic regression model
+
+```{r}
+par(mfrow = c(1, 2))
+beta0 = 1
+beta1 = 0.5
+
+curve(expr = exp(beta0 + beta1*x) / (1 + exp(beta0 + beta1*x)),
+      xlim = c(-15, 15), col = "black", 
+      main = expression(pi == frac(e^{1 + 0.5*x[1]}, 1+e^{1+0.5*x[1]})),
+      xlab = expression(x[1]), ylab = expression(pi))
+
+beta1 = -0.5
+curve(expr = exp(beta0 + beta1*x) / (1 + exp(beta0 + beta1*x)),
+      xlim = c(-15, 15), col = "black", 
+      main = expression(pi == frac(e^{1 - 0.5*x[1]}, 1+e^{1 -0.5*x[1]})),
+      xlab = expression(x[1]), ylab = expression(pi))
+
+
+```
+
+# Example
+
+```{r}
+df = read.table(file = "Placekick.csv", header = TRUE, sep = ",")
+str(df)
+
+head(df)
+
+# check NA in each column
+apply(is.na(df), 2, sum)
+
+# check the dependent variable of interest
+table(df$good)
+
+prop.table(table(df$good))
+
+
+```
+# use distance explanatory variable to estimate the probability of a successful placekick
+
+```{r}
+mod.fit = glm(formula = good ~ distance, family = binomial(link = logit), data = df)
+mod.fit
+
+```
+
+$logit(\pi) = 5.812 - 0.115distance$
+
+```{r}
+# there are many information stored within the mod.fit object
+names(mod.fit)
+
+length(mod.fit$coefficients)
+
+mod.fit$coefficients
+
+mod.fit$coefficients[1]
+```
+
+
+```{r}
+summary(object = mod.fit)
+
+```
+
+```{r}
+class(mod.fit)
+```
+
+```{r}
+methods(class = glm)
+```
+
+```{r}
+summary(df$distance)
+```
+
+```{r}
+curve(expr = exp(mod.fit$coefficients[1] + mod.fit$coefficients[2]*x) /
+        (1 + exp(mod.fit$coefficients[1] + mod.fit$coefficients[2]*x)),
+         col = "red", xlim = c(18, 66), ylab = expression(hat(pi)), xlab = "Distance",
+         main = "Estimated probability of success for a placekick", panel.first = grid()
+        )
+           
+           
+```
+
+```{r}
+mod.fit2 = glm(formula = good ~ change + distance, family = binomial(link = logit), data = df)
+summary(mod.fit2)
+
+mod.fit2$coefficients
+```
+It takes 6 iterations to come up with the parameters
+
+```{r}
+newdata = data.frame(change = 0.5, distance = 50)
+predict(mod.fit2, newdata, type="response")
+
+```
+
+```{r}
+b0 = mod.fit2$coefficients[1]
+b1 = mod.fit2$coefficients[2]
+b2 = mod.fit2$coefficients[3]
+
+summary(df$change)
+
+x_range = seq(from = min(df$distance), to=max(df$distance), by = .1)
+
+curve1 = exp(b0 + b1*0.5 + b2*x_range) /
+  (1 + exp(b0 + b1*0.5 + b2*x_range))
+
+curve2 = exp(b0 + b1*0.1 + b2*x_range) /
+  (1 + exp(b0 + b1*0.1 + b2*x_range))
+
+curve3 = exp(b0 + b1*1 + b2*x_range) /
+  (1 + exp(b0 + b1*1 + b2*x_range))
+
+plot(x_range, curve1, ylim = c(0, 1), col = "blue", type= "l", xlab = "distance",
+     ylab = "P(outcome)", main = "Probability of Success for a Placekick")
+lines(x_range, curve2, col = "gold", type= "l")
+lines(x_range, curve3, col = "orangered", type= "l")
+
+```
+The blue line is with change = 0.5, the red line 1.0 and the yellow line 0.1. The line with smaller change value has higher probability of sucess.
+
+## General approach for log-likelihood function optimization
+check page 71 textbook
+
+```{r}
+logL = function(beta, x, Y) {
+  pi = exp(beta[1] + beta[2] *x) / ( 1 + exp(beta[1] + beta[2] *x))
+  sum(Y*log(pi) + (1-Y)*log(1-pi))
+}
+
+logL(beta = mod.fit$coefficients, x = df$distance, Y = df$good)
+```
+
+
+```{r}
+# find starting values for parameter estimate
+reg.mod = lm(formula = good ~ distance, data = df)
+reg.mod$coefficients
+```
+
+
+```{r}
+# use control = list(fnscale = -1) to "maximize" instead of minimize
+mod.fit.optim = optim(par = reg.mod$coefficients, fn = logL, 
+                      hessian = TRUE, x = df$distance, Y = df$good, control = list(fnscale = -1),
+                      method = "BFGS")
+names(mod.fit.optim)
+
+mod.fit.optim$par
+
+mod.fit.optim$convergence
+
+-solve(mod.fit.optim$hessian)
+
+```
+
+
+## Variance - Covariance Matrix
+
+```{r}
+
+vcov(mod.fit2)
+```
+
+```{r}
+summary(mod.fit2)
+```
+
+## Hypothesis testing to assess the importance of an explanatory variable
+### Anova() function from the car package
+### More gneral way of testing - anova() function --- reduced and full model approach
+
+```{r}
+library(car)
+Anova(mod = mod.fit2, test = "LR")
+
+```
+
+when Anova() is NOT available with more complex models than logistic regression
+
+```{r}
+mod.fit2 = glm(formula = good ~ change + distance, family = binomial(link = logit), data = df)
+mod.fit.Ho = glm(formula = good ~ distance, family = binomial(link = logit), data = df)
+anova(mod.fit.Ho, mod.fit2, test = "Chisq") # note anova, not Anova
+
+```
+
+## Deviance
+Deviance refers to the amount that a particular model deviates from another model as measured by -2log(lambda)
+
+```{r}
+mod.fit2 = glm(formula = good ~ change + distance, family = binomial(link = logit), data = df)
+mod.fit.Ho = glm(formula = good ~ distance, family = binomial(link = logit), data = df)
+
+dframe = mod.fit.Ho$df.residual - mod.fit2$df.residual
+
+stat = mod.fit.Ho$deviance - mod.fit2$deviance
+
+pvalue = 1 - pchisq(q= stat, df = dframe)
+data.frame(Ho.resid.dev = mod.fit2$deviance, Ha.resid.dev = mod.fit2$deviance,
+           df = dframe, stat = round(stat, 4), 
+           pvalue = round(pvalue, 4))
+```
+
+## Confidence Interval for Odds Ratio
+### Profile likelihood ratio internval
+
+```{r}
+
+mod.fit = glm(formula = good ~ distance, family = binomial(link = logit), data = df)
+beta.ci = confint(object = mod.fit, parm = "distance", level = 0.95)
+# confint finds an interval for b1 itself
+beta.ci
+
+# then we use exp() function to find the confidence interval for OR
+rev(1/exp(beta.ci*10)) # invert OR C.I. and c=10
+as.numeric(rev(1/exp(beta.ci*10)))
+
+```
+
+## Confidence Interval for Probaiblity of Sucess
+### Wald Interval
+
+```{r}
+# estiamte the probability of success for a distance of 20 yards
+linear.pred = mod.fit$coefficients[1] + mod.fit$coefficients[2] * 20
+linear.pred
+
+exp(linear.pred)/(1+exp(linear.pred))
+```
+```{r}
+predict.data = data.frame(distance = 20)
+predict(object = mod.fit, newdata = predict.data, type = "link")
+predict(object = mod.fit, newdata = predict.data, type = "response")
+```
+
+```{r}
+linear.pred = predict(object = mod.fit, newdata = predict.data, type = "link", se = TRUE)
+linear.pred
+```
+```{r}
+pi.hat = exp(linear.pred$fit) / (1 + exp(linear.pred$fit))
+alpha = 0.05
+CI.lin.pred = linear.pred$fit + qnorm(p = c(alpha/2, 1 - alpha/2)) * linear.pred$se
+CI.pi = exp(CI.lin.pred)/(1 + exp(CI.lin.pred))
+CI.pi
+
+data.frame(predict.data, pi.hat, lower= CI.pi[1], upper = CI.pi[2])
+```
+
+```{r}
+alpha = 0.05
+predict.data = data.frame(distance = c(20, 30), change = c(0.5, 0.5))
+linear.pred = predict(object = mod.fit2, newdata = predict.data, type = "link", se = TRUE)
+CI.lin.pred.x20 = linear.pred$fit[1] + qnorm(p = c(alpha/2, 1 - alpha/2) * linear.pred$se[1])
+CI.lin.pred.x30 = linear.pred$fit[2] + qnorm(p = c(alpha/2, 1 - alpha/2) * linear.pred$se[2])
+
+round(exp(CI.lin.pred.x20)/(1 + exp(CI.lin.pred.x20)), 4) # CI for distance 20
+round(exp(CI.lin.pred.x30)/(1 + exp(CI.lin.pred.x30)), 4) # CI for distance 30
+
+```
+
+## Visual Assessment of the Logistic Regression
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

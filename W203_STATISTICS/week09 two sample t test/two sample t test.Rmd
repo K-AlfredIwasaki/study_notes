@@ -1,0 +1,109 @@
+---
+title: "two sample t-test"
+author: "K Iwasaki"
+date: "September 11, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+S = read.csv("united_states_senate_2014_v2.csv")
+summary(S)
+
+```
+
+# Is there a difference between the amount of money a senator raises and the amount spent?
+**Dependent t-test (paird t-test)**
+
+0. Analyse the problem.
+
+There is a claer pairing in this case. Money raised vs. money spent for each senator.
+Since we have a large sample, we can use CLT to justify parametric test.
+
+1. Construct hypothesis.
+
+$H_0$ is there is no difference between them.
+
+2. Check the assumption of normality
+
+The distributions for the money raised and spent are not normal but should be fine because of CLT.
+```{r}
+hist(S$Campaign.Money.Raised..millions.of..., breaks = 20)
+
+hist(S$Campaign.Money.Spent..millions.of..., breaks = 20)
+
+diff = S$Campaign.Money.Raised..millions.of... - S$Campaign.Money.Spent..millions.of...
+
+hist(diff, breaks = 20)
+
+```
+
+3. Check the assumption of equal variances.
+
+Since they are paird. This is ok. There is onlly one distribution to test.
+
+4. Run the t.test
+```{r}
+t.test(S$Campaign.Money.Raised..millions.of..., S$Campaign.Money.Spent..millions.of..., paired = T)
+
+```
+
+p-value is very small. Reject null hypothesis that there is no difference in the money raised and money spent for the senatros.
+
+5. Calculate Effect Size
+
+The differences in the mean is 1.418
+
+# Do female Democratic senators raise more or less money than female Republican senators?
+**Independent t-test **
+
+0. Analyze the problem
+
+The data we are interested in are not paired.
+
+1. Construct hypothesis.
+
+$H_0$ is there is no difference between average money raised by female democratic senators and average money raised by female republican senators. Two tailed test since we don't know less or more.
+Also, we doon't have many observation.
+
+2. Check the assumpiton of normality
+
+```{r}
+female_democrat_mask = (S$Gender == "Female") & (S$Party == "Democrat")
+female_republican_mask = (S$Gender == "Female") & (S$Party == "Republican")
+
+female_democ_money = S[female_democrat_mask, ]$Campaign.Money.Raised..millions.of...
+female_repub_money = S[female_republican_mask, ]$Campaign.Money.Raised..millions.of...
+
+hist(female_democ_money, breaks = 20)
+hist(female_repub_money, breaks = 20)
+
+```
+3. Check the assumption of equal variances
+
+```{r}
+library(car)
+leveneTest(Campaign.Money.Raised..millions.of... ~ Party, data = S[S$Gender=="Female",])
+
+```
+
+```{r}
+wilcox.test(Campaign.Money.Raised..millions.of... ~ Party, data = S[S$Gender=="Female",])
+```
+
+
+```{r}
+t.test(Campaign.Money.Raised..millions.of... ~ Party, data = S[S$Gender=="Female",])
+```
+
+
+
+
+
+
