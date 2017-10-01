@@ -1,0 +1,145 @@
+---
+title: "Live Session - Week 3: Discrete Response Models Lecture 2"
+author: "Devesh Tiwari and Jeffrey Yau"
+date: "Sept 19, 2017"
+output: pdf_document
+---
+
+# Agenda
+
+
+# Announcments
+
+Lab 1 has been posted!!
+
+It is due on Sunday October 1, by 11:59 PM PT.
+
+
+# This week
+
+## Topics covered
+
+* Variable transformation: interactions among explanatory variables
+* Variable transformation: quadratic term
+* Categorical explanatory variables
+* Odds ratio in the context of categorical explanatory variables
+* Convergence criteria and complete separation
+
+Please make sure that you are very familiar with the concepts and techniques coverd in this and last lecture, as they will be used again in the next two lectures in situations that are more general (from two categorical to $J > 2$ categories and from unordered cateogrical variables to ordinal variables). Especially in multinomial logistic regression models, the notions will be much heavier.
+
+##Required Readings:
+
+**BL2015:** Christopher R. Bilder and Thomas M. Loughin. Analysis of Categorical Data with R. CRC Press. 2015.
+
+  - Ch. 2.2.5 – 2.2.7, 2.3
+
+
+\newpage
+# Breakout Session : Interpreting coefficients (20 minutes in breakout groups + 10 minutes group discussion)
+
+I printed output from two models based on the data we examined last week. In your breakout sessions, answer the following questions
+
+(a) Describe, in words, the difference between the two models. What is the second model testing?
+
+(b) Interpret the coefficeints for *k5* and *age* using odds ratios, in both models.
+
+(c) Calculate the 95 \%  Wald - interval for your interpretations above [Take home].
+
+(d) Calculate the 95 \% Profile LR intervals for your interpretations above. Are they the same? Why or why not [Take Home]? 
+
+```{r, message = FALSE}
+rm(list = ls())
+library(car)
+require(dplyr)
+library(Hmisc)
+library(stargazer)
+
+Mroz$totalKids <- Mroz$k5 + Mroz$k618
+
+mroz.glm <- glm(lfp ~ totalKids + age + wc + hc + lwg + inc,
+                family = 'binomial', data = Mroz)
+
+mroz.interact.glm <- glm(lfp ~ totalKids + age + wc + hc + lwg + inc
+                 + wc:age,
+                family = 'binomial', data = Mroz)
+
+
+stargazer(mroz.glm, mroz.interact.glm, type = 'text')
+```
+
+# Group Discussion 1: Choosing among models
+
+(1) Based on the discussion thus far, which model do you prefer? Why? What does it mean for one model to be "better" than another?
+
+(2) What is the residual devieance of a model? Could you use that information from a model to decide which model is "better" than another?
+
+## Demo: Assessing the explanatory power of different models
+```{r}
+# If the models are nested, we can use the Anova function
+anova(mroz.glm, mroz.interact.glm, test = "Chisq")
+
+# If the models are not nested, we can compare the AIC values
+AIC(mroz.glm, mroz.interact.glm)
+```
+
+
+# Group Disucssion 2: Predicted probabilities
+
+It is really important to be able to graphically present the relationship between changes in covariates of interest and the predicted probability that a given event occurs (the dependent variable). A graphical presentation will help you assess the practical significance of your model results, mainly because you are forced to show how practically significant changes in X impact your dependent variable. 
+
+I am going to generate confidence intervals using the Wald-standard errors as generated from the *predict.glm* function. The *predict.glm* function can return predicted values in terms of the log-odds (type = "link") and in terms of the predicted probability of an event occuring (type = "response"). *predict.glm* does not calculate confidence intervals, it calculates the predicted value's confidence interval instead (se.fit = TRUE). We are going to compare and contrast two ways to calculate predicted values and their confidence intervals: The wrong way and the right way.
+
+Take a look at the plots and code below, what is wrong with the "wrong" way of producing CI using the predict.glm function? After taking a look at the predicted probability chart, do you think that this is a real problem or are the instructors just being unneccsarily picky?
+
+Now, re-run the following code in order to generate predicted probability charts for women who have 4 children under the age of 5. What do you notice?
+
+```{r}
+mroz.old.glm <- glm(lfp ~ k5 + k618 + age + wc + hc + lwg + inc,
+                family = 'binomial', data = Mroz)
+summary(mroz.old.glm)
+## The right way to do it
+
+newdf <- data.frame(k5 = 0,
+                    k618 = 0,
+                    age = seq(from = 30, to = 60, by = 1),
+                    wc = 'no',
+                    hc = 'no',
+                    lwg = mean(Mroz$lwg),
+                    inc = mean(Mroz$inc))
+
+lp.hat <- predict.glm(mroz.old.glm, newdata = newdf, type = "link", se.fit = TRUE)
+head(lp.hat)
+
+lp.hat.mean <- lp.hat$fit
+lp.hat.lci <- lp.hat$fit - 1.96 * lp.hat$se.fit
+lp.hat.uci <- lp.hat$fit + 1.96 * lp.hat$se.fit
+
+pi.hat <- exp(lp.hat.mean) / (1 + exp(lp.hat.mean))
+pi.hat.lci <- exp(lp.hat.lci) / (1 + exp(lp.hat.lci))
+pi.hat.uci <- exp(lp.hat.uci) / (1 + exp(lp.hat.uci))
+
+### Plot predicted probabilities
+age <- newdf$age
+plot(age, pi.hat, ylim = range(c(pi.hat.lci, pi.hat.uci)),
+     xlab = "Age", ylab = "Predicted Prob of LFP = 1", type = 'l', col = 'red', lwd = 2)
+lines(age, pi.hat.lci, col = 'red', lwd = 0.5)
+lines(age, pi.hat.uci, col = 'red', lwd = 0.5)
+
+
+
+#### The wrong way
+pi.hat.response <- predict.glm(mroz.old.glm, newdf, type = "response", se.fit = TRUE)
+pi.hat.response.lci <- pi.hat.response$fit - 1.96*pi.hat.response$se.fit
+pi.hat.response.uci <- pi.hat.response$fit + 1.96*pi.hat.response$se.fit
+
+plot(age, pi.hat.response$fit, ylim = range(c(pi.hat.response.lci, pi.hat.response.uci)),
+     xlab = "Age", ylab = "Predicted Prob of LFP = 1", type = 'l', col = 'red', lwd = 2)
+lines(age, pi.hat.response.lci, col = 'red', lwd = 0.5)
+lines(age, pi.hat.response.uci, col = 'red', lwd = 0.5)
+
+```
+
+
+# Take home exercise
+
+Create predicted probability charts for the following models *mroz.glm* and *mroz.interact.glm* in order to determine whether or not you think that the interaction term is neccessary. 

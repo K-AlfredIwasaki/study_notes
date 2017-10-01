@@ -1,0 +1,395 @@
+---
+title: "w271 Lab1"
+author: "K Iwasaki"
+date: "September 29, 2017"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(car)
+library(corrplot)
+library(ggplot2)
+library(tables)
+library(stargazer)
+
+```
+
+# 0. Introduction
+
+Objectives of this project are to create statical models that incorporate the relationship between voters' preference and dependent variables including age, gendear, and race, and to extract insights from the modeling exercise for the client who is interested in selling T-shirts to voters who are likely to support politically liberal candidates.
+
+We are given the data-set from a political survey conducted in January of 2016 and is able to identify voters who preferred Bernie Sanders over Hillary Clinton (1 = Likes Bernie more than Clinton; 0 = Likes Clinton more than Bernie). In addition, this (extremely simple) dataset contains information on respondents':
+
+- Party affiliation (1 if Democrat , 2 if Independent or Other, and 3 if Republican);
+- Race (1 if white, 0 otherwise);
+- Gender (2 if female, 1 if male);
+- and Birthyear.
+
+# 1. Set-up
+
+Before diving into the analysis, we look at the data-set at high level. Specificially, we check summary statistics, variable categories (categorical, continous and etc), NA values in each column, and distribution for each column.
+
+**Some observations from the intial exploration:**
+
+- There are 1200 examples in the dateset.
+- There are 9 NA values in the preference columns.Removed rows with NA values
+- Correlation matrix shows that race_white and party are associated with sanders_preference while other indepenent variables have very weak correlation with sanders_preference. Also note that depedent variables don't show strong colleration among them except race_white and party, and race_white and birthyr
+- 57.2% of them prefer Bernie Sanders over Hillary Clinton.
+- 72.9% of them are white.
+- 52.5% of them are male and the rest are female.
+- Their age are median 48 and mean 48.Since Min 19 and Max 95, it seeems there is no outliers.
+- It's important to make sure that the 1200 examples are representative of the population our client is interested in and that they are randomly sampled. Otherwise, the inference we make in the following sections are invalid.
+
+```{r, fig.height = 4, fig.width = 5, fig.show='hold', fig.align='center'}
+df = read.csv("public_opinion.csv")
+
+head(df)
+
+nrow(df)
+
+# summary stats
+summary(df)
+
+# variable categories
+str(df) # notifce they are not factors
+
+# check NA values
+apply(is.na(df), 2, sum)
+
+# investigate NA values further
+df[is.na(df$sanders_preference),]
+
+# drop rows with NA
+df = df %>%
+  filter(!is.na(sanders_preference))
+
+# plot correlation matrix
+par(oma=c(0,0,2,0))
+corrplot(cor(df), method = "number", title = "Correlation Matrix", mar = c(2, 0, 1, 0))
+```
+
+```{r}
+# conver columns into factor
+df$race_white = factor(df$race_white)
+df$party = factor(df$party)
+df$gender = factor(df$gender)
+
+# confirm the change
+str(df)
+
+# check 
+table(df$party)
+
+# create column age
+df$age = 2016 - df$birthyr # since the poll was conducted in January 2016
+
+# get stats for the age column
+summary(df$age)
+
+# expalin this later
+df$bi.party = ifelse(df$party == 1, 1, 0)
+
+```
+# 2. Model
+## a. Description of the model
+Describe your chosen model in words, along with a brief description of the variables and the model's functional form (Note: You do not have to justify your choices at this step).
+
+$$
+log(odds) = -0.013age + 0.670bi.party + 0.865race\_white
+$$
+
+```{r}
+
+mod.glm = glm(sanders_preference ~ age + bi.party + race_white, family = "binomial", data = df)
+
+```
+
+
+## b. Description of variables in the model
+
+We examine variables that are included and are not included in the model one by one. Below is a quick summary.
+
+- Gender  --- Not included in the model
+- Race    --- Included in the model
+- Party   --- Included in the model
+- Age     --- Included in the model
+- Interaction term: party:race_white  --- Not included in the model
+- Interaction term: age:race_white    --- Not included in the model
+- Interaction term: party: age --- Not included in the model
+
+### Gender --- Not included in the model
+
+We inspected the variable by visualization and t.tset. With the following obesrvations, we decided NOT to include the variable age into the model.
+
+- Previous correlation matrix shows that there is little correlation between gender and sanders_preference.
+- 57.4% of males prefer Sanders while 57.7% of females prefer Sanders. There is no siginificant evidence to conclude there is a difference in the two proportions. Also the practical significance is small.
+
+```{r, fig.height = 3, fig.width = 6, fig.show='hold', fig.align='center'}
+
+# 1. male, 2. female
+
+table(df$sanders_preference, df$gender)
+
+prop.table(table(df$sanders_preference, df$gender))
+
+ggplot(df, aes(x = gender, fill = factor(sanders_preference))) + geom_bar()
+
+# conduct t.test
+male = df[df$gender == 1, ]$sanders_preference
+female = df[df$gender == 2, ]$sanders_preference
+
+t.test(male, female)
+
+```
+
+
+### Race -- Included in the model
+
+We decide to include race_white variable as a result of the inspection as below. There are some notes:
+
+- 63.7% of White respondents prefer Sanders while 41% of non-white respondents prefer Sanders. T.test results show that the differece between white and non-white group is statistically and practically significant.
+- This validates the previous result of the colleration matrix.
+- Will follow up on potential interaction effect of the variable with age and party variable.
+
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+
+# 1. White 0. otherwise
+
+table(df$sanders_preference)
+
+table(df$sanders_preference, df$race_white)
+
+prop.table(table(df$sanders_preference, df$race_white))
+
+ggplot(df, aes(x = race_white, fill = factor(sanders_preference))) + geom_bar()
+
+# conduct t.test
+white = df[df$race_white == 1, ]$sanders_preference
+non_white = df[df$race_white == 0, ]$sanders_preference
+
+t.test(white, non_white)
+
+
+```
+
+### Party -- Included in the model as bi.party varible (0 as democrat, 1 as non-democrat)
+
+We decide to include party variable in the model.
+
+- Democratic voters (party1) shows clearly lower preference for Sanders compared to Independent(party2) and Republican(party3) voters. Average 45% of democratic voters prefer Sanders while about 65% of Independent and Repulibcan voters prefer Sanders respectively. The differences are statistically significant as well according to the t.test below.
+- To simplify the model and its interpretation later, create variables with binary values: democrat(1) or non-democrat(0)
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+
+# 1. Democrat, 2. Independent or other 3. Republican
+
+table(df$sanders_preference, df$party)
+
+prop.table(table(df$sanders_preference, df$party))
+
+ggplot(df, aes(x = party, fill = factor(sanders_preference))) + geom_bar()
+
+# t.test
+party1 = df[df$party == 1,]$sanders_preference
+party2 = df[df$party == 2,]$sanders_preference
+party3 = df[df$party == 3,]$sanders_preference
+
+t.test(party1, party2)
+t.test(party2, party3)
+t.test(party1, party3)
+
+# create new variable
+df$bi.party = ifelse(df$party == 1, 0, 1)
+table(df$bi.party)
+
+```
+
+
+### Age -- Included in the model
+
+Recall that the correlation matrix shows that there is no strong correlation between age and the dependent variable and instead, there is a negative correlation between race_white and age. with that in mind, we observe as followings through the analysis.
+
+- The t.test shows that avereage age of Sanders supports is Sanders supporters are on average younger than Clinton supporters by two years with statistical significance.
+- Effect size, the two-year differrent, might cause different inpretations that this is large or small. I would argue this is small because the survey respondents distribute from age 19 to 95. Two-year difference is no significant.
+- I keep age variable in the model because this variable is particular interest of the client.
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+ggplot(df, aes(x = age, fill = factor(sanders_preference))) +
+  geom_density(alpha = 0.5)
+
+# binning age
+df$bin_age = .bincode(df$age, c(18, 30, 40, 50, 60, 70, 100), TRUE)
+
+# check the distribution of age across the bins
+table(df$bin_age)
+
+# indepedent t-test
+
+sanders_age = df[df$sanders_preference == 1,]$age
+clinton_age = df[df$sanders_preference == 0,]$age
+
+t.test(sanders_age, clinton_age)
+
+
+```
+
+
+### Interaction term: party x race_white --- Not included in the model
+
+Move onto investigate interaction terms: we focus on look for particular segment of voteres that shows siginificantly difference in terms of the peference.
+
+White voters consistently support Sanders across parties and non-white voters consistenly support Clinton. There is no particular segment of voters show difference. Thus we don't observe interaction effect here.
+
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+
+df$sanders_preference = factor(df$sanders_preference)
+
+ftable(df %>% select(race_white, party, sanders_preference))
+
+ggplot(df, aes(x =race_white, y = ..prop.., group = sanders_preference, fill = sanders_preference)) +
+  geom_bar(position = "dodge") +
+  facet_grid(.~party)
+
+```
+
+
+
+
+### Interaction term: age x race_white --- Not included in the model
+
+It looks Sanders supporters are yournger than their opponents in each race group. The age gap between Sanders supporters and clinton supporters in the non-white race group is larger than the one in the white race group. This combination might be a candidate for an interaction term.
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+ggplot(df, aes(x = race_white, y = age, col = factor(sanders_preference))) + geom_boxplot()
+```
+
+### Interaction term: party x age --- Included in the model
+
+It is interesting to observe that in the Democratic voters (party1) shows the largest age gap between Sanders supporters and Cinton supports. This combination is a good candidate for an interaction term.
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+ggplot(df, aes(x = party, y = age, col = factor(sanders_preference))) + geom_boxplot()
+```
+
+
+## c. Comparison with other candidate models
+Based on your EDA, describe other models that you might have considered and why you ended up choosing your final model. Be sure to print each of the model results and any statistical tests you used to choose which model to use.
+
+```{r, fig.height = 4, fig.width = 6, fig.show='hold', fig.align='center'}
+
+base = glm(sanders_preference ~ age, family = "binomial", data = df)
+
+mod.glm = glm(sanders_preference ~ age + bi.party + race_white, family = "binomial", data = df)
+
+mod.glm.interaction1 = glm(sanders_preference ~ age + bi.party + race_white + age:bi.party, 
+                           family = "binomial", data = df)
+
+mod.glm.interaction2 = glm(sanders_preference ~ age + bi.party + race_white + age:race_white, 
+                           family = "binomial", data = df)
+
+summary(mod.glm)
+
+stargazer(base, mod.glm, mod.glm.interaction1, mod.glm.interaction2, type = "text")
+
+```
+
+
+## d. Model result
+
+```{r}
+summary(mod.glm)
+```
+
+
+## e. Statistical tests for the model
+Conduct all of the relevant statistical tests on your chosen model.
+
+- f-test
+- wald - 
+
+```{r}
+
+```
+
+
+# 3. Relationship between age and the predicted probabilty of supporting Sanders
+Graph the relationship between age and the predicted probabilty of supporting Sanders.
+-- Be sure to include any graphs that helps you understand how your model can help you answer the question at hand.
+
+```{r, fig.height = 7, fig.width = 6, fig.show='hold', fig.align='center'}
+
+### create dfs
+# white and democrat => highest prob to support sanders
+newdf = data.frame(age = seq(from = 20, to = 80, by = 1),
+                    bi.party = 1, # democrat
+                    race_white = factor(1) # white
+                    )
+
+# non-white and democrat
+newdf2 = data.frame(age = seq(from = 20, to = 80, by = 1),
+                    bi.party = 1, # democrat
+                    race_white = factor(0) # non-white
+                    )
+
+# white and non-democrat
+newdf3 = data.frame(age = seq(from = 20, to = 80, by = 1),
+                    bi.party = 0, # non-democrat
+                    race_white = factor(1) # white
+                    )
+
+# non-white and non-democrat
+newdf4 = data.frame(age = seq(from = 20, to = 80, by = 1),
+                    bi.party = 0, # non-democrat
+                    race_white = factor(0) # non-white
+                    )
+
+
+### function to plot ci
+plot_ci = function(newdf, title) {
+  # predict
+  lp.hat = predict.glm(mod.glm, newdata = newdf, type = "link", se.fit = TRUE)
+  
+  # calcualte ci
+  lp.hat.mean = lp.hat$fit
+  lp.hat.lci = lp.hat$fit - 1.96 * lp.hat$se.fit
+  lp.hat.uci = lp.hat$fit + 1.96 * lp.hat$se.fit
+  
+  # convert to probability
+  pi.hat = exp(lp.hat.mean) / (1 + exp(lp.hat.mean))
+  pi.hat.lci = exp(lp.hat.lci) / (1 + exp(lp.hat.lci))
+  pi.hat.uci = exp(lp.hat.uci) / (1 + exp(lp.hat.uci))
+  
+  # plot
+  age = newdf$age # x axis
+  plot(age, pi.hat, ylim = range(c(0, 1)),
+     xlab = "Age", ylab = "Probability", main = title,type = 'l', col = 'red', lwd = 2 )
+  lines(age, pi.hat.lci, col = 'blue', lwd = 0.5)
+  lines(age, pi.hat.uci, col = 'blue', lwd = 0.5)
+  
+}
+
+### plot
+par(mfrow=c(2,2))
+plot_ci(newdf, "white and democrat")
+plot_ci(newdf2, "non-white and democrat")
+plot_ci(newdf3, "white and non-democrat")
+plot_ci(newdf4, "non-white and non-democrat")
+
+
+```
+
+
+# 4. Conclusion
+Comment on the importance of age and evaluate your client's decision to target younger voters.
+
+# 5. Appendix
+
+

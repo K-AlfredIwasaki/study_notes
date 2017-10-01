@@ -1,0 +1,192 @@
+---
+title: "Unit2"
+author: "K Iwasaki"
+date: "September 13, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Example
+
+```{r}
+df = read.table(file = "Placekick.csv", header = TRUE, sep = ",")
+str(df)
+head(df)
+
+# check NA in each column
+apply(is.na(df), 2, sum)
+
+# check the dependent variable of interest
+table(df$good)
+
+prop.table(table(df$good))
+
+```
+
+# Variable Transformation Part 1: Interaction Term
+
+```{r}
+mod.fit.Ha = glm(formula = good ~ distance + wind + distance:wind, family = binomial(link = logit), data = df)
+summary(mod.fit.Ha)
+
+```
+
+# Likelihood-Ratio Test 1--- using "a"nova
+anova($H_0$, $H_1$, test = "Chisq")
+
+```{r}
+mod.fit.Ho = glm(formula = good ~ distance + wind, family = binomial(link = logit), data = df)
+anova(mod.fit.Ho, mod.fit.Ha, test = "Chisq")
+
+```
+
+p-value 0.02379. this is statistically significant thus we reject null hypothesis.
+
+# Likelihood-Ratio Test 2--- using "A"nova
+Anova($H_1$, test = "LR")
+```{r}
+library(car)
+Anova(mod.fit.Ha, test = "LR") # full model including the interaction
+
+```
+
+
+```{r}
+par(mfrow = c(1, 2))
+beta0 = mod.fit.Ha$coefficients[1]
+beta1 = mod.fit.Ha$coefficients[2]
+beta2 = mod.fit.Ha$coefficients[3]
+beta1_2 = mod.fit.Ha$coefficients[4]
+  
+
+curve(expr = exp(beta0 + beta1*x + beta2*1 + beta1_2*x*1) / (1 + exp(beta0 + beta1*x + beta2*1 + beta1_2*x*1)), xlim = c(20, 70)  )
+curve(expr = exp(beta0 + beta1*x + beta2*0 + beta1_2*x*0) / (1 + exp(beta0 + beta1*x + beta2*0 + beta1_2*x*0)), xlim = c(20, 70), add = TRUE )
+
+beta0 = mod.fit.Ho$coefficients[1]
+beta1 = mod.fit.Ho$coefficients[2]
+beta2 = mod.fit.Ho$coefficients[3]
+
+curve(expr = exp(beta0 + beta1*x + beta2*1) / (1 + exp(beta0 + beta1*x + beta2*1)), xlim = c(20, 70) )
+curve(expr = exp(beta0 + beta1*x + beta2*0) / (1 + exp(beta0 + beta1*x + beta2*0)), xlim = c(20, 70), add = TRUE )
+
+
+```
+
+# Odds Ratio
+
+```{r}
+beta.hat = mod.fit.Ha$coefficients[2:4]
+c = 1
+distance = seq(from = 20, to = 60, by = 10)
+
+OR.wind = exp(c * (beta.hat[2] + beta.hat[3]*distance))
+cov.mat = vcov(mod.fit.Ha)[2:4, 2:4]
+
+# Var(beta^_2 + distance*beta^_3)
+var.log.OR = cov.mat[2,2] + distance^2*cov.mat[3,3] + 2*distance*cov.mat[2,3]
+
+ci.log.OR.low = c*(beta.hat[2] + beta.hat[3]*distance) - c*qnorm(p=0.975)*sqrt(var.log.OR)
+ci.log.OR.up = c*(beta.hat[2] + beta.hat[3]*distance) + c*qnorm(p=0.975)*sqrt(var.log.OR)
+
+round(data.frame(distance = distance, OR.hat = 1/OR.wind, OR.low = 1/exp(ci.log.OR.up),
+                 OR.up = 1/exp(ci.log.OR.low)), 2)
+
+```
+
+# Quadratic Term:
+
+```{r}
+model_ha = glm(formula = good ~ distance + I(distance^2), family = binomial(link = logit),
+    data = df)
+
+model_ho = glm(formula = good ~ distance, family = binomial(link = logit),
+    data = df)
+
+summary(model_ha)
+```
+
+# Likelihood Ratio Test --- anova, Anova
+
+```{r}
+
+anova(model_ho, model_ha, test = "Chisq")
+
+library(package = car)
+Anova(model_ha)
+
+
+```
+
+# Plot the Estimated Model
+
+```{r}
+# refer p.74
+w = aggregate(formula = good ~ distance, data = df, FUN = sum)
+n = aggregate(formula = good ~ distance, data = df, FUN = length)
+w.n = data.frame(distance = w$distance, success = w$good, trials = n$good, 
+                 proportion = round(w$good/n$good, 4))
+
+beta.hat.ha  = model_ha$coefficients
+beta.hat.ho  = model_ho$coefficients
+
+symbols(x = w$distance, y = w$good/n$good, circles = sqrt(n$good), inches = 0.5,
+        xlab = "Distance (yards)", ylab = "Estimated probability", xlim = c(10, 70),
+        panel.first = grid(col = "gray", lty = "dotted"))
+
+curve(expr = exp(beta.hat.ha[1] + beta.hat.ha[2]*x + beta.hat.ha[3]*x^2) / (1 + exp(beta.hat.ha[1] + beta.hat.ha[2]*x + beta.hat.ha[3]*x^2)), xlim = c(10, 70), col = "red", add = TRUE ) # full model
+curve(expr = exp(beta.hat.ho[1] + beta.hat.ho[2]*x) / (1 + exp(beta.hat.ho[1] + beta.hat.ho[2]*x)), xlim = c(10, 70), col = "blue", add = TRUE ) # null model
+
+```
+
+# Categorical Explanatory Variables
+
+```{r}
+
+tomato = read.table(file = "TomatoVirus.csv", header = TRUE, sep = ",")
+head(tomato)
+
+class(tomato$Control)
+
+levels(tomato$Control)
+
+tomato$Infest = factor(tomato$Infest)
+
+```
+
+
+```{r}
+mod.fit = glm(formula = Virus8/Plants ~ Infest + Control, family = binomial(link = logit),
+              data = tomato, weights = Plants)
+summary(mod.fit)
+
+```
+
+base case is control "B".
+It's good to write down the model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
